@@ -1,0 +1,6 @@
+\.(py[co]|o|so|a|la|sw[op]|orig|rej|egg-info|db)$
+~$
+^(bin|tmp)/
+\.DS_Store$
+vendor
+^(build|dist)
