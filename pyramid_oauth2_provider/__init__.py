@@ -10,18 +10,29 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
-from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 
+from pyramid.config import Configurator
+from pyramid.interfaces import IAuthenticationPolicy
+from pyramid.authentication import OauthAuthenticationPolicy
+
 from .models import DBSession
+
+def includeme(config):
+    settings = config.registry.settings
+    engine = engine_from_config(settings, 'sqlalchemy.')
+    DBSession.configure(bind=engine)
+
+    if not config.registry.queryUtility(IAuthenticationPolicy):
+        config.set_authentication_policy(OauthAuthenticationPolicy())
+
+    config.add_route('oauth2_provider_token', '/oauth2/token')
+    config.scan()
+    return config.make_wsgi_app()
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
-    engine = engine_from_config(settings, 'sqlalchemy.')
-    DBSession.configure(bind=engine)
     config = Configurator(settings=settings)
-    config.add_static_view('static', 'static', cache_max_age=3600)
-    config.add_route('home', '/')
-    config.scan()
+    includeme(config)
     return config.make_wsgi_app()
