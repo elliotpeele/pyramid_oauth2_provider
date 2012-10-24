@@ -10,25 +10,71 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
+import base64
+
 from zope.interface import implementer
 
 from pyramid.interfaces import IAuthenticationPolicy
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authentication import CallbackAuthenticationPolicy
 
+from pyramid.httpexceptions import HTTPBadRequest
+
+from .models import Oauth2Token
+from .models import DBSession as db
+
+from .errors import InvalidToken
+
 @implementer(IAuthenticationPolicy)
 class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
+    def _get_bearer_token(self, request):
+        if 'Authorization' in request.headers:
+            auth = request.headers.get('Authorization')
+        elif 'authorization' in request.headers:
+            auth = request.headers.get('authorization')
+        else:
+            return False
+
+        if not auth.lower() in ('bearer', 'basic'):
+            return False
+
+        parts = auth.split()
+        if len(parts) != 2:
+            return False
+
+        token = base64.decodestring(auth[1])
+        token_type = auth[0].lower()
+
+        if token_type == 'basic':
+            client_id, client_secret = base64.decodestring(token).split(':')
+            request.client_id = client_id
+            request.client_secret = client_secret
+
+        return token_type, token
+
     def _isOauth(self, request):
-        return False
+        return bool(self._get_bearer_token(request))
 
     def unauthenticated_userid(self, request):
-        pass
+        token_type, token = self._get_bearer_token(request)
+        if token_type != 'bearer':
+            return None
+
+        auth_token = db.query(Oauth2Token).filter_by(access_token=token).first()
+        if not auth_token:
+            raise HTTPBadRequest(InvalidToken())
+
+        return auth_token.user_id
 
     def remember(self, request, principal, **kw):
-        pass
+        """
+        I don't think there is anything to do for an oauth request here.
+        """
 
     def forget(self, request):
-        pass
+        """
+        You could revoke the access token on a call to forget.
+        """
 
 
 @implementer(IAuthenticationPolicy)
