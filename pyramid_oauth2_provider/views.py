@@ -25,6 +25,7 @@ from pyramid_oauth2_provider.errors import InvalidClient
 from pyramid_oauth2_provider.errors import InvalidRequest
 from pyramid_oauth2_provider.errors import UnsupportedGrantType
 
+from pyramid_oauth2_provider.util import oauth2_settings
 from pyramid_oauth2_provider.interfaces import IAuthCheck
 
 @view_config(route_name='oauth2_provider_token', renderer='json',
@@ -85,15 +86,17 @@ def oauth2_token(request):
     # case someone has configured a different policy, check again. HTTPS is
     # required for all Oauth2 authenticated requests to ensure the security of
     # client credentials and authorization tokens.
-    if request.scheme != 'https':
+    if (request.scheme != 'https' and
+        oauth2_settings('require_ssl', default=True)):
         return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
             'requires all requests to be made via HTTPS.'))
 
     # Make sure we got a client_id and secret through the authorization
     # policy. Note that you should only get here if not using the Oauth2
     # authorization policy or access was granted through the AuthTKt policy.
-    if not request.client_id or not request.client_secret:
-        return HTTPUnauthorized
+    if (not hasattr(request, 'client_id') or
+        not hasattr(request, 'client_secret')):
+        return HTTPUnauthorized('Invalid client credentials')
 
     client = db.query(Oauth2Client).filter_by(
         client_id=request.client_id).first()
