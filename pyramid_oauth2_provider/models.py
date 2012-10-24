@@ -10,12 +10,15 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
+from sqlalchemy import func
+
 from sqlalchemy import Column
 from sqlalchemy import ForeignKey
 
 from sqlalchemy import String
 from sqlalchemy import Integer
 from sqlalchemy import Boolean
+from sqlalchemy import DateTime
 
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -39,6 +42,7 @@ class Oauth2Client(Base):
     client_id = Column(String(64), unique=True, nullable=False)
     client_secret = Column(String(64), unique=True, nullable=False)
     revoked = Column(Boolean, default=False)
+    revocation_date = Column(DateTime)
 
     def __init__(self):
         self.client_id = gen_client_id()
@@ -46,24 +50,59 @@ class Oauth2Client(Base):
 
     def revoke(self):
         self.revoked = True
+        self.revocation_date = func.now()
+
+    def isRevoked(self):
+        return self.revoked
 
 
 class Oauth2Token(Base):
     __tablename__ = 'oauth2_provider_tokens'
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
     access_token = Column(String(64), unique=True, nullable=False)
     refresh_token = Column(String(64), unique=True, nullable=False)
     expires_in = Column(Integer, nullable=False, default=60*60)
+
     revoked = Column(Boolean, default=False)
+    revocation_date = Column(DateTime)
+
+    creation_date = Column(DateTime, default=func.now())
 
     client_id = Column(Integer, ForeignKey(Oauth2Client.id))
     client = relationship(Oauth2Client, backref=backref('tokens'))
 
-    def __init__(self, client):
+    def __init__(self, client, user_id):
         self.client = client
+        self.user_id = user_id
 
         self.access_token = gen_token(self.client)
         self.refresh_token = gen_token(self.client)
 
     def revoke(self):
         self.revoked = True
+        self.revocation_date = func.now()
+
+    def isRevoked(self):
+        if self.creation_date + self.expires_in > func.now():
+            self.revoke()
+        return self.revoked
+
+    def refresh(self):
+        """
+        Generate a new token for this client.
+        """
+
+        cls = self.__class__
+        self.revoke()
+        return cls(self.client, self.user_id)
+
+    def asJSON(self, **kwargs):
+        token = {
+            'access_token': self.access_token,
+            'refresh_token': self.refresh_token,
+            'user_id': self.user_id,
+            'expires_in': self.expires_in,
+        }
+        kwargs.update(token)
+        return kwargs
