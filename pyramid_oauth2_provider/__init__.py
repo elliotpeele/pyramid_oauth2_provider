@@ -1,7 +1,7 @@
 #
 # Copyright (c) Elliot Peele <elliot@bentlogic.net>
 #
-# This program is distributed under the terms of the MIT License as found·
+# This program is distributed under the terms of the MIT License as found
 # in a file called LICENSE. If it is not present, the license
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
@@ -15,10 +15,10 @@ from sqlalchemy import engine_from_config
 from pyramid.config import Configurator
 from pyramid.exceptions import ConfigurationError
 from pyramid.interfaces import IAuthenticationPolicy
-from pyramid.authentication import OauthAuthenticationPolicy
 
-from .models import DBSession
-from .interfaces import IAuthCheck
+from pyramid_oauth2_provider.models import DBSession
+from pyramid_oauth2_provider.interfaces import IAuthCheck
+from pyramid_oauth2_provider.authentication import OauthAuthenticationPolicy
 
 def includeme(config):
     settings = config.registry.settings
@@ -28,7 +28,7 @@ def includeme(config):
     if not config.registry.queryUtility(IAuthenticationPolicy):
         config.set_authentication_policy(OauthAuthenticationPolicy())
 
-    auth_check = settings.get('pyramid_oauth2_provider.auth_check')
+    auth_check = settings.get('oauth2_provider.auth_checker')
     if not auth_check:
         raise ConfigurationError('You must provide an implementation of the '
             'authentication check interface that is included with '
@@ -39,7 +39,6 @@ def includeme(config):
 
     config.add_route('oauth2_provider_token', '/oauth2/token')
     config.scan()
-    return config.make_wsgi_app()
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.

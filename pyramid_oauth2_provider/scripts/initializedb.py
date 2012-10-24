@@ -1,7 +1,7 @@
 #
 # Copyright (c) Elliot Peele <elliot@bentlogic.net>
 #
-# This program is distributed under the terms of the MIT License as found·
+# This program is distributed under the terms of the MIT License as found
 # in a file called LICENSE. If it is not present, the license
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
@@ -12,7 +12,6 @@
 
 import os
 import sys
-import transaction
 
 from sqlalchemy import engine_from_config
 
@@ -23,7 +22,6 @@ from pyramid.paster import (
 
 from ..models import (
     DBSession,
-    MyModel,
     Base,
     )
 
@@ -42,6 +40,3 @@ def main(argv=sys.argv):
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
-    with transaction.manager:
-        model = MyModel(name='one', value=1)
-        DBSession.add(model)

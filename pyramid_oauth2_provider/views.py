@@ -1,7 +1,7 @@
 #
 # Copyright (c) Elliot Peele <elliot@bentlogic.net>
 #
-# This program is distributed under the terms of the MIT License as found·
+# This program is distributed under the terms of the MIT License as found
 # in a file called LICENSE. If it is not present, the license
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
@@ -16,18 +16,18 @@ from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.httpexceptions import HTTPMethodNotAllowed
 
-from .models import DBSession as db
-from .models import Oauth2Token
-from .models import Oauth2Client
+from pyramid_oauth2_provider.models import DBSession as db
+from pyramid_oauth2_provider.models import Oauth2Token
+from pyramid_oauth2_provider.models import Oauth2Client
 
-from .errors import InvalidToken
-from .errors import InvalidClient
-from .errors import InvalidRequest
-from .errors import UnsupportedGrantType
+from pyramid_oauth2_provider.errors import InvalidToken
+from pyramid_oauth2_provider.errors import InvalidClient
+from pyramid_oauth2_provider.errors import InvalidRequest
+from pyramid_oauth2_provider.errors import UnsupportedGrantType
 
-from .interfaces import IAuthCheck
+from pyramid_oauth2_provider.interfaces import IAuthCheck
 
-@view_config(route_name='oauth2_token', renderer='json',
+@view_config(route_name='oauth2_provider_token', renderer='json',
              permission=NO_PERMISSION_REQUIRED)
 def oauth2_token(request):
     """

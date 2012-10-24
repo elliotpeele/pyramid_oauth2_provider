@@ -1,7 +1,7 @@
 #
 # Copyright (c) Elliot Peele <elliot@bentlogic.net>
 #
-# This program is distributed under the terms of the MIT License as found·
+# This program is distributed under the terms of the MIT License as found
 # in a file called LICENSE. If it is not present, the license
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
