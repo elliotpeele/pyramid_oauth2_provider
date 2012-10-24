@@ -106,3 +106,9 @@ class Oauth2Token(Base):
         }
         kwargs.update(token)
         return kwargs
+
+
+def initialize_sql(engine, settings):
+    DBSession.configure(bind=engine)
+    Base.metadata.bind = engine
+    Base.metadata.create_all(engine)

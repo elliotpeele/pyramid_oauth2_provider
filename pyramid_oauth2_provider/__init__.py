@@ -16,14 +16,15 @@ from pyramid.config import Configurator
 from pyramid.exceptions import ConfigurationError
 from pyramid.interfaces import IAuthenticationPolicy
 
-from pyramid_oauth2_provider.models import DBSession
+from pyramid_oauth2_provider.models import initialize_sql
 from pyramid_oauth2_provider.interfaces import IAuthCheck
 from pyramid_oauth2_provider.authentication import OauthAuthenticationPolicy
 
 def includeme(config):
     settings = config.registry.settings
     engine = engine_from_config(settings, 'sqlalchemy.')
-    DBSession.configure(bind=engine)
+
+    initialize_sql(engine, settings)
 
     if not config.registry.queryUtility(IAuthenticationPolicy):
         config.set_authentication_policy(OauthAuthenticationPolicy())
