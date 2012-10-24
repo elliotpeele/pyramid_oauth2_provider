@@ -13,10 +13,12 @@
 from sqlalchemy import engine_from_config
 
 from pyramid.config import Configurator
+from pyramid.exceptions import ConfigurationError
 from pyramid.interfaces import IAuthenticationPolicy
 from pyramid.authentication import OauthAuthenticationPolicy
 
 from .models import DBSession
+from .interfaces import IAuthCheck
 
 def includeme(config):
     settings = config.registry.settings
@@ -25,6 +27,15 @@ def includeme(config):
 
     if not config.registry.queryUtility(IAuthenticationPolicy):
         config.set_authentication_policy(OauthAuthenticationPolicy())
+
+    auth_check = settings.get('pyramid_oauth2_provider.auth_check')
+    if not auth_check:
+        raise ConfigurationError('You must provide an implementation of the '
+            'authentication check interface that is included with '
+            'pyramid_oauth2_provider for verifying usernames and passwords')
+
+    policy = config.maybe_dotted(auth_check)
+    config.registry.registerUtility(policy, IAuthCheck)
 
     config.add_route('oauth2_provider_token', '/oauth2/token')
     config.scan()
