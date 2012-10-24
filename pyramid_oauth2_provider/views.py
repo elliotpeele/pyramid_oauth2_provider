@@ -11,6 +11,7 @@
 #
 
 from pyramid.view import view_config
+from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.httpexceptions import HTTPMethodNotAllowed
@@ -26,7 +27,8 @@ from .errors import UnsupportedGrantType
 
 from .interfaces import IAuthCheck
 
-@view_config(route_name='oauth2_token', renderer='json')
+@view_config(route_name='oauth2_token', renderer='json',
+             permission=NO_PERMISSION_REQUIRED)
 def oauth2_token(request):
     """
     * In the case of an incoming authentication request a POST is made
