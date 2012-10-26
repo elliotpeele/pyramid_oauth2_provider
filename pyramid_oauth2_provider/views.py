@@ -26,6 +26,7 @@ from pyramid_oauth2_provider.errors import InvalidRequest
 from pyramid_oauth2_provider.errors import UnsupportedGrantType
 
 from pyramid_oauth2_provider.util import oauth2_settings
+from pyramid_oauth2_provider.util import getClientCredentials
 from pyramid_oauth2_provider.interfaces import IAuthCheck
 
 @view_config(route_name='oauth2_provider_token', renderer='json',
@@ -40,7 +41,7 @@ def oauth2_token(request):
         Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW
         Content-Type: application/x-www-form-urlencoded
 
-        grant_type=password&username=johndoe&password=A3ddj3w&user_id=1234
+        grant_type=password&username=johndoe&password=A3ddj3w
 
     The basic auth header contains the client_id:client_secret base64
     encoded for client authentication.
@@ -91,6 +92,8 @@ def oauth2_token(request):
         return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
             'requires all requests to be made via HTTPS.'))
 
+    getClientCredentials(request)
+
     # Make sure we got a client_id and secret through the authorization
     # policy. Note that you should only get here if not using the Oauth2
     # authorization policy or access was granted through the AuthTKt policy.
@@ -128,8 +131,8 @@ def handle_password(request, client):
             'and password are required to obtain a password based grant.'))
 
     auth_check = request.registry.queryUtility(IAuthCheck)
-    user_id = auth_check.checkauth(request.POST.get('username'),
-                                   request.POST.get('password'))
+    user_id = auth_check().checkauth(request.POST.get('username'),
+                                     request.POST.get('password'))
 
     if not user_id:
         return HTTPUnauthorized(InvalidClient(error_description='Username and '
@@ -137,6 +140,7 @@ def handle_password(request, client):
 
     auth_token = Oauth2Token(client, user_id)
     db.add(auth_token)
+    db.flush()
     return auth_token.asJSON(token_type='bearer')
 
 def handle_refresh_token(request, client):
@@ -155,16 +159,17 @@ def handle_refresh_token(request, client):
         return HTTPUnauthorized(InvalidToken(error_description='Provided '
             'refresh_token is not valid.'))
 
-    if auth_token.client_id != client.client_id:
+    if auth_token.client.client_id != client.client_id:
         return HTTPBadRequest(InvalidClient(error_description='Client does '
             'not own this refresh_token.'))
 
-    if auth_token.user_id != request.POST.get('user_id'):
+    if str(auth_token.user_id) != request.POST.get('user_id'):
         return HTTPBadRequest(InvalidClient(error_description='The given '
             'user_id does not match the given refresh_token.'))
 
     new_token = auth_token.refresh()
     db.add(new_token)
+    db.flush()
     return new_token.asJSON(token_type='bearer')
 
 def add_cache_headers(request):
