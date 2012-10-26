@@ -26,5 +26,7 @@ def gen_client_id():
 def gen_client_secret():
     return _get_hash().hexdigest()
 
-def gen_token():
-    return _get_hash().hexdigest()
+def gen_token(client):
+    sha = _get_hash()
+    sha.update(client.client_id)
+    return sha.hexdigest()
