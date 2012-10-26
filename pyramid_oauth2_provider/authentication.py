@@ -11,6 +11,7 @@
 #
 
 import base64
+import logging
 
 from zope.interface import implementer
 
@@ -25,38 +26,17 @@ from .models import DBSession as db
 
 from .errors import InvalidToken
 
+from .util import getClientCredentials
+
+log = logging.getLogger('pyramid_oauth2_provider.authentication')
+
 @implementer(IAuthenticationPolicy)
 class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
-    def _get_bearer_token(self, request):
-        if 'Authorization' in request.headers:
-            auth = request.headers.get('Authorization')
-        elif 'authorization' in request.headers:
-            auth = request.headers.get('authorization')
-        else:
-            return False
-
-        if not auth.lower() in ('bearer', 'basic'):
-            return False
-
-        parts = auth.split()
-        if len(parts) != 2:
-            return False
-
-        token = base64.decodestring(auth[1])
-        token_type = auth[0].lower()
-
-        if token_type == 'basic':
-            client_id, client_secret = base64.decodestring(token).split(':')
-            request.client_id = client_id
-            request.client_secret = client_secret
-
-        return token_type, token
-
     def _isOauth(self, request):
-        return bool(self._get_bearer_token(request))
+        return bool(getClientCredentials(request))
 
     def unauthenticated_userid(self, request):
-        token_type, token = self._get_bearer_token(request)
+        token_type, token = getClientCredentials(request)
         if token_type != 'bearer':
             return None
 
