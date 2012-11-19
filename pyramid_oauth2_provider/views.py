@@ -10,6 +10,8 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
+import logging
+
 from pyramid.view import view_config
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.httpexceptions import HTTPBadRequest
@@ -28,6 +30,8 @@ from pyramid_oauth2_provider.errors import UnsupportedGrantType
 from pyramid_oauth2_provider.util import oauth2_settings
 from pyramid_oauth2_provider.util import getClientCredentials
 from pyramid_oauth2_provider.interfaces import IAuthCheck
+
+log = logging.getLogger('pyramid_oauth2_provider.views')
 
 @view_config(route_name='oauth2_provider_token', renderer='json',
              permission=NO_PERMISSION_REQUIRED)
@@ -80,6 +84,7 @@ def oauth2_token(request):
 
     # Make sure this is a POST.
     if request.method != 'POST':
+        log.info('rejected request due to invalid method: %s' % request.method)
         return HTTPMethodNotAllowed(
             'This endpoint only supports the POST method.')
 
@@ -89,6 +94,8 @@ def oauth2_token(request):
     # client credentials and authorization tokens.
     if (request.scheme != 'https' and
         oauth2_settings('require_ssl', default=True)):
+        log.info('rejected request due to unsupported scheme: %s'
+            % request.scheme)
         return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
             'requires all requests to be made via HTTPS.'))
 
@@ -99,6 +106,7 @@ def oauth2_token(request):
     # authorization policy or access was granted through the AuthTKt policy.
     if (not hasattr(request, 'client_id') or
         not hasattr(request, 'client_secret')):
+        log.info('did not receive client credentials')
         return HTTPUnauthorized('Invalid client credentials')
 
     client = db.query(Oauth2Client).filter_by(
@@ -106,6 +114,7 @@ def oauth2_token(request):
 
     # Again, the authorization policy should catch this, but check again.
     if not client or client.client_secret != request.client_secret:
+        log.info('received invalid client credentials')
         return HTTPBadRequest(InvalidRequest(
             error_description='Invalid client credentials'))
 
@@ -118,6 +127,7 @@ def oauth2_token(request):
     elif grant_type == 'refresh_token':
         resp = handle_refresh_token(request, client)
     else:
+        log.info('invalid grant type: %s' % grant_type)
         return HTTPBadRequest(UnsupportedGrantType(error_description='Only '
             'password and refresh_token grant types are supported by this '
             'authentication server'))
@@ -127,6 +137,7 @@ def oauth2_token(request):
 
 def handle_password(request, client):
     if 'username' not in request.POST or 'password' not in request.POST:
+        log.info('missing username or password')
         return HTTPBadRequest(InvalidRequest(error_description='Both username '
             'and password are required to obtain a password based grant.'))
 
@@ -135,6 +146,7 @@ def handle_password(request, client):
                                      request.POST.get('password'))
 
     if not user_id:
+        log.info('could not validate user credentials')
         return HTTPUnauthorized(InvalidClient(error_description='Username and '
             'password are invalid.'))
 
@@ -145,10 +157,12 @@ def handle_password(request, client):
 
 def handle_refresh_token(request, client):
     if 'refresh_token' not in request.POST:
+        log.info('refresh_token field missing')
         return HTTPBadRequest(InvalidRequest(error_description='refresh_token '
             'field required'))
 
     if 'user_id' not in request.POST:
+        log.info('user_id field missing')
         return HTTPBadRequest(InvalidRequest(error_description='user_id '
             'field required'))
 
@@ -156,14 +170,17 @@ def handle_refresh_token(request, client):
         refresh_token=request.POST.get('refresh_token')).first()
 
     if not auth_token:
+        log.info('invalid refresh_token')
         return HTTPUnauthorized(InvalidToken(error_description='Provided '
             'refresh_token is not valid.'))
 
     if auth_token.client.client_id != client.client_id:
+        log.info('invalid client_id')
         return HTTPBadRequest(InvalidClient(error_description='Client does '
             'not own this refresh_token.'))
 
     if str(auth_token.user_id) != request.POST.get('user_id'):
+        log.info('invalid user_id')
         return HTTPBadRequest(InvalidClient(error_description='The given '
             'user_id does not match the given refresh_token.'))
 
