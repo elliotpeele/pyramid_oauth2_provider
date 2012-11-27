@@ -10,7 +10,6 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
-import base64
 import logging
 
 from zope.interface import implementer
