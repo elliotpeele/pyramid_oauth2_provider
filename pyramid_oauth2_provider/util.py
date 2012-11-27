@@ -60,4 +60,3 @@ def getClientCredentials(request):
         request.client_secret = client_secret
 
     return token_type, token
-
