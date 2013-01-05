@@ -4,7 +4,6 @@ from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.md')).read()
-CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 
 requires = [
     'pyramid',
@@ -13,23 +12,24 @@ requires = [
     'pyramid_tm',
     'pyramid_debugtoolbar',
     'zope.sqlalchemy',
+    'zope.interface',
     'waitress',
     ]
 
 setup(name='pyramid_oauth2_provider',
-      version='0.0',
+      version='0.1',
       description='pyramid_oauth2_provider',
-      long_description=README + '\n\n' +  CHANGES,
+      long_description=README,
       classifiers=[
         "Programming Language :: Python",
-        "Framework :: Pylons",
+        "Framework :: Pyramid",
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
         ],
-      author='',
-      author_email='',
+      author='Elliot Peele',
+      author_email='elliot@bentlogic.net',
       url='',
-      keywords='web wsgi bfg pylons pyramid',
+      keywords='web wsgi bfg pylons pyramid oauth2',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
