@@ -20,6 +20,9 @@ from pyramid_oauth2_provider.models import initialize_sql
 from pyramid_oauth2_provider.interfaces import IAuthCheck
 from pyramid_oauth2_provider.authentication import OauthAuthenticationPolicy
 
+# imported to make the test runnner happy
+from pyramid_oauth2_provider import tests
+
 def includeme(config):
     settings = config.registry.settings
     engine = engine_from_config(settings, 'sqlalchemy.')
