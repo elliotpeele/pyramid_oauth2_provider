@@ -25,13 +25,14 @@ by doing the following:
 Request Flow
 ------------
 Let's start by laying out a few ground rules when it comes to oauth2:
+
 1. All requests *must* be made via HTTPS.
 2. All data is transfered in headers and the body of messages rather than
    through url parameters.
 
 The token endpoint is provided as a way to obtain and rewnew access_tokens.
 
-Example initial authentication request:
+#### Example initial token request:
 
         POST /oauth2/token HTTP/1.1
         Host: server.example.com
@@ -43,3 +44,36 @@ Example initial authentication request:
 * The basic auth header is the client_id:client_secret base64 encoded.
 * Content-Type must be application/x-www-form-urlencoded
 
+#### Example refresh token request:
+
+        POST /token HTTP/1.1
+        Host: server.example.com
+        Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW
+        Content-Type: application/x-www-form-urlencoded
+
+        grant_type=refresh_token&refresh_token=tGzv3JOkF0XG5Qx2TlKW&user_id=1234
+
+* The basic auth header is the client_id:client_secret base64 encoded.
+* Content-Type must be application/x-www-form-urlencoded
+* The grant_type must be "refresh".
+* All form elements are required.
+
+#### Example token response:
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json;charset=UTF-8
+        Cache-Control: no-store
+        Pragma: no-cache
+
+        {
+          "access_token":"2YotnFZFEjr1zCsicMWpAA",
+          "token_type":"bearer",
+          "expires_in":3600,
+          "refresh_token":"tGzv3JOkF0XG5Qx2TlKW",
+          "user_id":1234,
+        }
+
+* The same response is returned for both auth token and refresh token requests.
+* The token_type will always be "bearer".
+* For purposes of this example the access_token and refresh_token are shorter
+  than normal.
