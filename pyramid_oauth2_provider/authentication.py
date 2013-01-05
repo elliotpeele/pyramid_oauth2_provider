@@ -34,7 +34,7 @@ class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
     def _isOauth(self, request):
         return bool(getClientCredentials(request))
 
-    def unauthenticated_userid(self, request):
+    def _get_auth_token(self, request):
         token_type, token = getClientCredentials(request)
         if token_type != 'bearer':
             return None
@@ -42,6 +42,13 @@ class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
         auth_token = db.query(Oauth2Token).filter_by(access_token=token).first()
         if not auth_token:
             raise HTTPBadRequest(InvalidToken())
+
+        return auth_token
+
+    def unauthenticated_userid(self, request):
+        auth_token = self._get_auth_token(request)
+        if not auth_token:
+            return None
 
         return auth_token.user_id
 
@@ -51,9 +58,11 @@ class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
         """
 
     def forget(self, request):
-        """
-        You could revoke the access token on a call to forget.
-        """
+        auth_token = self._get_auth_token(request)
+        if not auth_token:
+            return None
+
+        auth_token.revoke()
 
 
 @implementer(IAuthenticationPolicy)
