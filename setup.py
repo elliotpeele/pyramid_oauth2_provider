@@ -18,7 +18,7 @@ requires = [
 
 setup(name='pyramid_oauth2_provider',
       version='0.1',
-      description='pyramid_oauth2_provider',
+      description='Oauth2 endpoint for pyramid applications',
       long_description=README,
       classifiers=[
         "Programming Language :: Python",
@@ -28,7 +28,7 @@ setup(name='pyramid_oauth2_provider',
         ],
       author='Elliot Peele',
       author_email='elliot@bentlogic.net',
-      url='',
+      url='http://github.com/elliotpeele/pyramid_oauth2_provider',
       keywords='web wsgi bfg pylons pyramid oauth2',
       packages=find_packages(),
       include_package_data=True,
