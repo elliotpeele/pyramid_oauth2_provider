@@ -249,3 +249,16 @@ class TestTokenEndpoint(TestCase):
             token.get('refresh_token'), '2')
         token = self._process_view()
         self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+
+    def testRevokedAccessTokenRefresh(self):
+        token = self._process_view()
+        self._validate_token(token)
+
+        dbtoken = DBSession.query(Oauth2Token).filter_by(
+            access_token=token.get('access_token')).first()
+        dbtoken.revoke()
+
+        self.request = self._create_refresh_token_request(
+            token.get('refresh_token'), token.get('user_id'))
+        token = self._process_view()
+        self._validate_token(token)
