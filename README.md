@@ -16,7 +16,7 @@ by doing the following:
 * Define a implementation of the `pyramid_oauth2_provider.interfaces.IAuthCheck`
   interface that works against your current user authentication check mechanism.
 * In your paster configuration configure which IAuthCheck implementation to use
-  by specifying `oauth2_provider.auth_check`.
+  by specifying `oauth2_provider.auth_checker`.
 * In your development configuration, you may also want to disable ssl
   enforcement by specifying `oauth2_provider.require_ssl = false`.
 * Generate client credentials using the `create_client_credentials` script,
@@ -27,10 +27,10 @@ Request Flow
 Let's start by laying out a few ground rules when it comes to oauth2:
 
 1. All requests *must* be made via HTTPS.
-2. All data is transfered in headers and the body of messages rather than
+2. All data is transferred in headers and the body of messages rather than
    through url parameters.
 
-The token endpoint is provided as a way to obtain and rewnew `access_tokens`.
+The token endpoint is provided as a way to obtain and renew `access_tokens`.
 
 #### Example initial token request:
 
