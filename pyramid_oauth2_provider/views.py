@@ -17,6 +17,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.httpexceptions import HTTPMethodNotAllowed
+from pyramid.httpexceptions import HTTPFound
 
 from pyramid_oauth2_provider.models import DBSession as db
 from pyramid_oauth2_provider.models import Oauth2Token
@@ -32,6 +33,63 @@ from pyramid_oauth2_provider.util import getClientCredentials
 from pyramid_oauth2_provider.interfaces import IAuthCheck
 
 log = logging.getLogger('pyramid_oauth2_provider.views')
+
+@view_config(route_name='oauth2_provider_authorize', renderer='json',
+             permission=NO_PERMISSION_REQUIRED)
+def oauth2_authorize(request):
+    request.client_id = request.params.get('client_id')
+    client = db.query(Oauth2Client).filter_by(
+        client_id=request.client_id).first()
+
+    if not client:
+        log.info('received invalid client credentials')
+        return HTTPBadRequest(InvalidRequest(
+            error_description='Invalid client credentials'))
+
+    # This check should be taken care of via the authorization policy, but in
+    # case someone has configured a different policy, check again. HTTPS is
+    # required for all Oauth2 authenticated requests to ensure the security of
+    # client credentials and authorization tokens.
+    if (request.scheme != 'https' and
+        oauth2_settings('require_ssl', default=True)):
+        log.info('rejected request due to unsupported scheme: %s'
+                 % request.scheme)
+        return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
+            'requires all requests to be made via HTTPS.'))
+
+    redirect_uri = request.params.get('redirect_uri')
+    if len(client.redirect_uris) == 1 and (
+        not redirect_uri or redirect_uri == client.redirect_uris[0]):
+        redirection_uri = client.redirect_uris[0]
+    elif len(client.redirect_uris) > 1 and \
+         redirect_uri in client.redirect_uris:
+        redirection_uri = redirect_uri
+    else:
+        return HTTPBadRequest(InvalidRequest(
+            error_description='Redirection URI validation failed'))
+
+    resp = None
+    response_type = request.params.get('response_type')
+    if 'code' == response_type:
+        state = request.params.get('state') #recommended
+        resp = handle_authcode(request, client, redirection_uri)
+    elif 'token' == response_type:
+        state = request.params.get('state') #recommended
+        resp = handle_implicit(request, client, redirection_uri)
+    else:
+        log.info('received invalid response_type %s')
+        return HTTPBadRequest(InvalidRequest(error_description='Oauth2 unknown '
+            'response_type not supported'))
+    return resp
+
+def handle_authcode(request, client, redirection_uri):
+    #return HTTPFound(location=request.params.get('redirect_uri'))
+    return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
+        'response_type "code" not supported'))
+
+def handle_implicit(request, client, redirection_uri):
+    return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
+        'response_type "implicit" not supported'))
 
 @view_config(route_name='oauth2_provider_token', renderer='json',
              permission=NO_PERMISSION_REQUIRED)
