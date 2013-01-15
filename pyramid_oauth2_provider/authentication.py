@@ -40,7 +40,7 @@ class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
             return None
 
         auth_token = db.query(Oauth2Token).filter_by(access_token=token).first()
-        if not auth_token:
+        if not auth_token or auth_token.isRevoked():
             raise HTTPBadRequest(InvalidToken())
 
         return auth_token

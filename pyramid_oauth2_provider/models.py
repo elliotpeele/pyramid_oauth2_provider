@@ -10,6 +10,9 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
+import time
+from datetime import datetime
+
 from sqlalchemy import func
 
 from sqlalchemy import Column
@@ -84,7 +87,8 @@ class Oauth2Token(Base):
         self.revocation_date = func.now()
 
     def isRevoked(self):
-        if self.creation_date + self.expires_in > func.now():
+        expiry = time.mktime(self.creation_date.timetuple()) + self.expires_in
+        if datetime.fromtimestamp(expiry) < datetime.utcnow():
             self.revoke()
         return self.revoked
 
