@@ -32,9 +32,9 @@ from sqlalchemy.orm import scoped_session
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
-from pyramid_oauth2_provider.generators import gen_token
-from pyramid_oauth2_provider.generators import gen_client_id
-from pyramid_oauth2_provider.generators import gen_client_secret
+from .generators import gen_token
+from .generators import gen_client_id
+from .generators import gen_client_secret
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()

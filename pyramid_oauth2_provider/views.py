@@ -18,18 +18,16 @@ from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.httpexceptions import HTTPMethodNotAllowed
 
-from pyramid_oauth2_provider.models import DBSession as db
-from pyramid_oauth2_provider.models import Oauth2Token
-from pyramid_oauth2_provider.models import Oauth2Client
-
-from pyramid_oauth2_provider.errors import InvalidToken
-from pyramid_oauth2_provider.errors import InvalidClient
-from pyramid_oauth2_provider.errors import InvalidRequest
-from pyramid_oauth2_provider.errors import UnsupportedGrantType
-
-from pyramid_oauth2_provider.util import oauth2_settings
-from pyramid_oauth2_provider.util import getClientCredentials
-from pyramid_oauth2_provider.interfaces import IAuthCheck
+from .models import DBSession as db
+from .models import Oauth2Token
+from .models import Oauth2Client
+from .errors import InvalidToken
+from .errors import InvalidClient
+from .errors import InvalidRequest
+from .errors import UnsupportedGrantType
+from .util import oauth2_settings
+from .util import getClientCredentials
+from .interfaces import IAuthCheck
 
 log = logging.getLogger('pyramid_oauth2_provider.views')
 

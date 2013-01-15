@@ -22,9 +22,7 @@ from pyramid.httpexceptions import HTTPBadRequest
 
 from .models import Oauth2Token
 from .models import DBSession as db
-
 from .errors import InvalidToken
-
 from .util import getClientCredentials
 
 log = logging.getLogger('pyramid_oauth2_provider.authentication')
