@@ -13,6 +13,7 @@
 import base64
 import unittest
 import transaction
+from urlparse import urlparse, parse_qs
 
 from sqlalchemy import create_engine
 
@@ -20,11 +21,13 @@ from zope.interface import implementer
 
 from pyramid import testing
 from pyramid import httpexceptions
+from pyramid.response import Response
 
-from .views import oauth2_token
+from .views import oauth2_token, oauth2_authorize
 from .models import DBSession
 from .models import Oauth2Token
 from .models import Oauth2Client
+from .models import Oauth2Code
 from .models import initialize_sql
 from .interfaces import IAuthCheck
 
@@ -33,6 +36,8 @@ _auth_value = None
 class AuthCheck(object):
     def checkauth(self, username, password):
         return _auth_value
+
+_redirect_uri = None
 
 
 class TestCase(unittest.TestCase):
@@ -45,6 +50,8 @@ class TestCase(unittest.TestCase):
 
         self.auth = 1
 
+        self.redirect_uri = 'http://localhost'
+
     def _get_auth(self):
         global _auth_value
         return _auth_value
@@ -55,6 +62,16 @@ class TestCase(unittest.TestCase):
 
     auth = property(_get_auth, _set_auth)
 
+    def _get_redirect_uri(self):
+        global _redirect_uri
+        return _redirect_uri
+
+    def _set_redirect_uri(self, uri):
+        global _redirect_uri
+        _redirect_uri = uri
+
+    redirect_uri = property(_get_redirect_uri, _set_redirect_uri)
+
     def tearDown(self):
         DBSession.remove()
         testing.tearDown()
@@ -63,6 +80,75 @@ class TestCase(unittest.TestCase):
         return {'Authorization': '%s %s'
             % (scheme, base64.b64encode('%s:%s' % (username, password)))}
 
+class TestAuthorizeEndpoint(TestCase):
+    def setUp(self):
+        TestCase.setUp(self)
+        self.client = self._create_client()
+        self.request = self._create_request()
+
+    def tearDown(self):
+        TestCase.tearDown(self)
+        self.client = None
+        self.request = None
+
+    def _create_client(selfself):
+        with transaction.manager:
+            client = Oauth2Client()
+            DBSession.add(client)
+            client_id = client.client_id
+        client = DBSession.query(Oauth2Client).filter_by(client_id=client_id).first()
+        return client
+
+    def _create_request(self):
+        data = {
+            'response_type': 'code',
+            'client_id': self.client.client_id
+        }
+
+        request = testing.DummyRequest(post=data)
+        request.scheme = 'https'
+
+        return request
+
+    def _create_implicit_request(self):
+        data = {
+            'response_type': 'token',
+            'client_id': self.client.client_id
+        }
+
+        request = testing.DummyRequest(post=data)
+        request.scheme = 'https'
+
+        return request
+
+    def _process_view(self):
+        with transaction.manager:
+            token = oauth2_authorize(self.request)
+        return token
+
+    def _validate_authcode_response(self, response):
+        self.failUnless(isinstance(response, Response))
+        self.failUnlessEqual(response.status_int, 302)
+
+        redirect = urlparse(self.redirect_uri)
+        location = urlparse(response.location)
+        self.failUnlessEqual(location.scheme, redirect.scheme)
+        self.failUnlessEqual(location.hostname, redirect.hostname)
+        self.failUnlessEqual(location.path, redirect.path)
+
+        params = parse_qs(location.query)
+
+        self.failUnless('code' in params)
+
+        dbauthcodes = DBSession.query(Oauth2Code).filter_by(
+            authcode=params.get('code')).all()
+
+        self.failUnless(len(dbauthcodes) == 1)
+
+    def testAuthCodeRequest(self):
+        self.auth = 500
+        response = self._process_view()
+        self._validate_authcode_response(response)
 
 class TestTokenEndpoint(TestCase):
     def setUp(self):
