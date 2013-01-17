@@ -16,12 +16,12 @@ from pyramid.config import Configurator
 from pyramid.exceptions import ConfigurationError
 from pyramid.interfaces import IAuthenticationPolicy
 
-from pyramid_oauth2_provider.models import initialize_sql
-from pyramid_oauth2_provider.interfaces import IAuthCheck
-from pyramid_oauth2_provider.authentication import OauthAuthenticationPolicy
+from .models import initialize_sql
+from .interfaces import IAuthCheck
+from .authentication import OauthAuthenticationPolicy
 
 # imported to make the test runnner happy
-from pyramid_oauth2_provider import tests
+from . import tests
 
 def includeme(config):
     settings = config.registry.settings

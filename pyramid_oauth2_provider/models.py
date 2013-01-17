@@ -10,6 +10,9 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
+import time
+from datetime import datetime
+
 from sqlalchemy import func
 
 from sqlalchemy import Column
@@ -29,9 +32,9 @@ from sqlalchemy.orm import scoped_session
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
-from pyramid_oauth2_provider.generators import gen_token
-from pyramid_oauth2_provider.generators import gen_client_id
-from pyramid_oauth2_provider.generators import gen_client_secret
+from .generators import gen_token
+from .generators import gen_client_id
+from .generators import gen_client_secret
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
@@ -125,7 +128,8 @@ class Oauth2Token(Base):
         self.revocation_date = func.now()
 
     def isRevoked(self):
-        if self.creation_date + self.expires_in > func.now():
+        expiry = time.mktime(self.creation_date.timetuple()) + self.expires_in
+        if datetime.fromtimestamp(expiry) < datetime.utcnow():
             self.revoke()
         return self.revoked
 
