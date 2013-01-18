@@ -10,6 +10,13 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
+"""
+Custom HTTP exceptions that support rendering to JSON by default.
+"""
+
+# NOTE: If you need to add more errors, please subclass errors from
+#       httpexceptions as has been done below.
+
 from string import Template
 
 from pyramid import httpexceptions

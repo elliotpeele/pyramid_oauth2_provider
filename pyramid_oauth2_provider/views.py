@@ -14,9 +14,6 @@ import logging
 
 from pyramid.view import view_config
 from pyramid.security import NO_PERMISSION_REQUIRED
-from pyramid.httpexceptions import HTTPBadRequest
-from pyramid.httpexceptions import HTTPUnauthorized
-from pyramid.httpexceptions import HTTPMethodNotAllowed
 
 from .models import DBSession as db
 from .models import Oauth2Token
@@ -28,6 +25,9 @@ from .errors import UnsupportedGrantType
 from .util import oauth2_settings
 from .util import getClientCredentials
 from .interfaces import IAuthCheck
+from .jsonerrors import HTTPBadRequest
+from .jsonerrors import HTTPUnauthorized
+from .jsonerrors import HTTPMethodNotAllowed
 
 log = logging.getLogger('pyramid_oauth2_provider.views')
 

@@ -19,8 +19,8 @@ from sqlalchemy import create_engine
 from zope.interface import implementer
 
 from pyramid import testing
-from pyramid import httpexceptions
 
+from . import jsonerrors
 from .views import oauth2_token
 from .models import DBSession
 from .models import Oauth2Token
@@ -147,12 +147,12 @@ class TestTokenEndpoint(TestCase):
     def testInvalidMethod(self):
         self.request.method = 'GET'
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPMethodNotAllowed))
+        self.failUnless(isinstance(token, jsonerrors.HTTPMethodNotAllowed))
 
     def testInvalidScheme(self):
         self.request.scheme = 'http'
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testDisableSchemeCheck(self):
         self.request.scheme = 'http'
@@ -163,18 +163,18 @@ class TestTokenEndpoint(TestCase):
     def testNoClientCreds(self):
         self.request.headers = {}
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPUnauthorized))
+        self.failUnless(isinstance(token, jsonerrors.HTTPUnauthorized))
 
     def testInvalidClientCreds(self):
         self.request.headers = self.getAuthHeader(
             self.client.client_id, 'abcde')
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testInvalidGrantType(self):
         self.request.POST['grant_type'] = 'foo'
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testCacheHeaders(self):
         self._process_view()
@@ -186,17 +186,17 @@ class TestTokenEndpoint(TestCase):
     def testMissingUsername(self):
         self.request.POST.pop('username')
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testMissingPassword(self):
         self.request.POST.pop('password')
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testFailedPassword(self):
         self.auth = False
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPUnauthorized))
+        self.failUnless(isinstance(token, jsonerrors.HTTPUnauthorized))
 
     def testRefreshToken(self):
         token = self._process_view()
@@ -213,7 +213,7 @@ class TestTokenEndpoint(TestCase):
             token.get('refresh_token'), token.get('user_id'))
         self.request.POST.pop('refresh_token')
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testMissingUserId(self):
         token = self._process_view()
@@ -222,7 +222,7 @@ class TestTokenEndpoint(TestCase):
             token.get('refresh_token'), token.get('user_id'))
         self.request.POST.pop('user_id')
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testInvalidRefreshToken(self):
         token = self._process_view()
@@ -230,7 +230,7 @@ class TestTokenEndpoint(TestCase):
         self.request = self._create_refresh_token_request(
             'abcd', token.get('user_id'))
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPUnauthorized))
+        self.failUnless(isinstance(token, jsonerrors.HTTPUnauthorized))
 
     def testRefreshInvalidClientId(self):
         token = self._process_view()
@@ -240,7 +240,7 @@ class TestTokenEndpoint(TestCase):
         self.request.headers = self.getAuthHeader(
             '1234', self.client.client_secret)
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testUserIdMissmatch(self):
         token = self._process_view()
@@ -248,7 +248,7 @@ class TestTokenEndpoint(TestCase):
         self.request = self._create_refresh_token_request(
             token.get('refresh_token'), '2')
         token = self._process_view()
-        self.failUnless(isinstance(token, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testRevokedAccessTokenRefresh(self):
         token = self._process_view()
