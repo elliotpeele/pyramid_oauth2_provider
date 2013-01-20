@@ -6,7 +6,7 @@
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
 # This program is distributed in the hope that it will be useful, but
-# without any waranty; without even the implied warranty of merchantability
+# without any warranty; without even the implied warranty of merchantability
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
@@ -39,6 +39,33 @@ log = logging.getLogger('pyramid_oauth2_provider.views')
 @view_config(route_name='oauth2_provider_authorize', renderer='json',
              permission=Authenticated)
 def oauth2_authorize(request):
+    """
+    * In the case of a 'code' authorize request a GET or POST is made
+    with the following structure.
+
+        GET /authorize?response_type=code&client_id=aoiuer HTTP/1.1
+        Host: server.example.com
+
+        POST /authorize HTTP/1.1
+        Host: server.example.com
+        Content-Type: application/x-www-form-urlencoded
+
+        response_type=code&client_id=aoiuer
+
+    The response_type and client_id are required parameters. A redirect_uri
+    and state parameters may also be supplied. The redirect_uri will be
+    validated against the URI's registered for the client. The state is an
+    opaque value that is simply passed through for security on the client's
+    end.
+
+    The response to a 'code' request will be a redirect to a registered URI
+    with the authorization code and optional state values as query
+    parameters.
+
+        HTTP/1.1 302 Found
+        Location: https://client.example.com/cb?code=AverTaer&state=efg
+
+    """
     request.client_id = request.params.get('client_id')
 
     client = db.query(Oauth2Client).filter_by(
