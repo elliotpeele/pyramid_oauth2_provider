@@ -28,6 +28,7 @@ from .models import DBSession
 from .models import Oauth2Token
 from .models import Oauth2Client
 from .models import Oauth2Code
+from .models import Oauth2RedirectUri
 from .models import initialize_sql
 from .interfaces import IAuthCheck
 
@@ -91,11 +92,15 @@ class TestAuthorizeEndpoint(TestCase):
         self.client = None
         self.request = None
 
-    def _create_client(selfself):
+    def _create_client(self):
         with transaction.manager:
             client = Oauth2Client()
             DBSession.add(client)
             client_id = client.client_id
+
+            redirect_uri = Oauth2RedirectUri(client, self.redirect_uri)
+            DBSession.add(redirect_uri)
+
         client = DBSession.query(Oauth2Client).filter_by(client_id=client_id).first()
         return client
 
@@ -105,7 +110,7 @@ class TestAuthorizeEndpoint(TestCase):
             'client_id': self.client.client_id
         }
 
-        request = testing.DummyRequest(post=data)
+        request = testing.DummyRequest(params=data)
         request.scheme = 'https'
 
         return request
