@@ -24,6 +24,7 @@ from urllib import urlencode
 from .models import DBSession as db
 from .models import Oauth2Token
 from .models import Oauth2Code
+from .models import Oauth2RedirectUri
 from .models import Oauth2Client
 from .errors import InvalidToken
 from .errors import InvalidClient
@@ -60,13 +61,15 @@ def oauth2_authorize(request):
             'requires all requests to be made via HTTPS.'))
 
     redirect_uri = request.params.get('redirect_uri')
+    redirection_uri = None
     if len(client.redirect_uris) == 1 and (
         not redirect_uri or redirect_uri == client.redirect_uris[0]):
         redirection_uri = client.redirect_uris[0]
-    elif len(client.redirect_uris) > 1 and \
-         redirect_uri in client.redirect_uris:
-        redirection_uri = redirect_uri
-    else:
+    elif len(client.redirect_uris) > 0:
+        redirection_uri = db.query(Oauth2RedirectUri)\
+            .filter_by(client_id=client.id, uri=redirect_uri).first()
+
+    if redirection_uri is None:
         return HTTPBadRequest(InvalidRequest(
             error_description='Redirection URI validation failed'))
 
@@ -79,7 +82,7 @@ def oauth2_authorize(request):
         resp = handle_implicit(request, client, redirection_uri, state)
     else:
         log.info('received invalid response_type %s')
-        return HTTPBadRequest(InvalidRequest(error_description='Oauth2 unknown '
+        resp = HTTPBadRequest(InvalidRequest(error_description='Oauth2 unknown '
             'response_type not supported'))
     return resp
 
