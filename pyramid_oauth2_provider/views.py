@@ -36,6 +36,7 @@ log = logging.getLogger('pyramid_oauth2_provider.views')
              permission=NO_PERMISSION_REQUIRED)
 def oauth2_authorize(request):
     request.client_id = request.params.get('client_id')
+
     client = db.query(Oauth2Client).filter_by(
         client_id=request.client_id).first()
 
@@ -81,9 +82,7 @@ def oauth2_authorize(request):
     return resp
 
 def handle_authcode(request, client, redirection_uri):
-    #return HTTPFound(location=request.params.get('redirect_uri'))
-    return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
-        'response_type "code" not supported'))
+    return HTTPFound(location=redirection_uri.uri)
 
 def handle_implicit(request, client, redirection_uri):
     return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
