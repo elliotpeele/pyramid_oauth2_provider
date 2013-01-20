@@ -152,6 +152,7 @@ class TestAuthorizeEndpoint(TestCase):
 
     def testAuthCodeRequest(self):
         self.auth = 500
+        self.config.testing_securitypolicy(self.auth)
         response = self._process_view()
         self._validate_authcode_response(response)
 
