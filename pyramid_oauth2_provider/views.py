@@ -13,7 +13,7 @@
 import logging
 
 from pyramid.view import view_config
-from pyramid.security import NO_PERMISSION_REQUIRED
+from pyramid.security import NO_PERMISSION_REQUIRED, authenticated_userid, Authenticated
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.httpexceptions import HTTPMethodNotAllowed
@@ -23,6 +23,7 @@ from urllib import urlencode
 
 from .models import DBSession as db
 from .models import Oauth2Token
+from .models import Oauth2Code
 from .models import Oauth2Client
 from .errors import InvalidToken
 from .errors import InvalidClient
@@ -35,7 +36,7 @@ from .interfaces import IAuthCheck
 log = logging.getLogger('pyramid_oauth2_provider.views')
 
 @view_config(route_name='oauth2_provider_authorize', renderer='json',
-             permission=NO_PERMISSION_REQUIRED)
+             permission=Authenticated)
 def oauth2_authorize(request):
     request.client_id = request.params.get('client_id')
 
@@ -85,13 +86,21 @@ def oauth2_authorize(request):
 def handle_authcode(request, client, redirection_uri, state=None):
     parts = urlparse(redirection_uri.uri)
     qparams = dict(parse_qsl(parts.query))
-    qparams['code'] = 1234
+
+    user_id = authenticated_userid(request)
+    auth_code = Oauth2Code(client, user_id)
+    db.add(auth_code)
+    db.flush()
+
+    qparams['code'] = auth_code.authcode
     if state:
         qparams['state'] = state
-    parts = ParseResult(parts.scheme, parts.netloc, parts.path, parts.params, urlencode(qparams), '')
+    parts = ParseResult(
+        parts.scheme, parts.netloc, parts.path, parts.params,
+        urlencode(qparams), '')
     return HTTPFound(location=parts.geturl())
 
-def handle_implicit(request, client, redirection_uri):
+def handle_implicit(request, client, redirection_uri, state=None):
     return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
         'response_type "implicit" not supported'))
 
