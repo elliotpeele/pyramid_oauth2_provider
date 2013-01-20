@@ -86,6 +86,7 @@ class TestAuthorizeEndpoint(TestCase):
         TestCase.setUp(self)
         self.client = self._create_client()
         self.request = self._create_request()
+        self.config.testing_securitypolicy(self.auth)
 
     def tearDown(self):
         TestCase.tearDown(self)
@@ -151,8 +152,32 @@ class TestAuthorizeEndpoint(TestCase):
         self.failUnless(len(dbauthcodes) == 1)
 
     def testAuthCodeRequest(self):
-        self.auth = 500
-        self.config.testing_securitypolicy(self.auth)
+        response = self._process_view()
+        self._validate_authcode_response(response)
+
+    def testInvalidScheme(self):
+        self.request.scheme = 'http'
+        response = self._process_view()
+        self.failUnless(isinstance(response, httpexceptions.HTTPBadRequest))
+
+    def testDisableSchemeCheck(self):
+        self.request.scheme = 'http'
+        self.config.get_settings()['oauth2_provider.require_ssl'] = False
+        response = self._process_view()
+        self._validate_authcode_response(response)
+
+    def testNoClientCreds(self):
+        self.request.params.pop('client_id')
+        response = self._process_view()
+        self.failUnless(isinstance(response, httpexceptions.HTTPBadRequest))
+
+    def testNoResponseType(self):
+        self.request.params.pop('response_type')
+        response = self._process_view()
+        self.failUnless(isinstance(response, httpexceptions.HTTPBadRequest))
+
+    def testRedirectUriSupplied(self):
+        self.request.params['redirect_uri'] = self.redirect_uri
         response = self._process_view()
         self._validate_authcode_response(response)
 
