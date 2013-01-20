@@ -181,6 +181,22 @@ class TestAuthorizeEndpoint(TestCase):
         response = self._process_view()
         self._validate_authcode_response(response)
 
+    def testMultipleRedirectUrisUnspecified(self):
+        with transaction.manager:
+            redirect_uri = Oauth2RedirectUri(self.client, 'https://otherhost.com')
+            DBSession.add(redirect_uri)
+        response = self._process_view()
+        self.failUnless(isinstance(response, jsonerrors.HTTPBadRequest))
+
+    def testMultipleRedirectUrisSpecified(self):
+        with transaction.manager:
+            redirect_uri = Oauth2RedirectUri(self.client, 'https://otherhost.com')
+            DBSession.add(redirect_uri)
+        self.request.params['redirect_uri'] = 'https://otherhost.com'
+        self.redirect_uri = 'https://otherhost.com'
+        response = self._process_view()
+        self._validate_authcode_response(response)
+
 class TestTokenEndpoint(TestCase):
     def setUp(self):
         TestCase.setUp(self)
