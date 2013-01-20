@@ -197,6 +197,23 @@ class TestAuthorizeEndpoint(TestCase):
         response = self._process_view()
         self._validate_authcode_response(response)
 
+    def testRetainRedirectQueryComponent(self):
+        uri = 'https://otherhost.com/and/path?some=value'
+        with transaction.manager:
+            redirect_uri = Oauth2RedirectUri(
+                self.client, uri)
+            DBSession.add(redirect_uri)
+        self.request.params['redirect_uri'] = uri
+        self.redirect_uri = uri
+        response = self._process_view()
+        self._validate_authcode_response(response)
+
+        parts = urlparse(response.location)
+        params = dict(parse_qsl(parts.query))
+
+        self.failUnless('some' in params)
+        self.failUnlessEqual(params['some'], 'value')
+
     def testState(self):
         state_value = 'testing'
         self.request.params['state'] = state_value
