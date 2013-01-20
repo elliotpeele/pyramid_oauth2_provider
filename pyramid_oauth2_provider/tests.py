@@ -141,6 +141,7 @@ class TestAuthorizeEndpoint(TestCase):
         self.failUnlessEqual(location.scheme, redirect.scheme)
         self.failUnlessEqual(location.hostname, redirect.hostname)
         self.failUnlessEqual(location.path, redirect.path)
+        self.failIf(location.fragment)
 
         params = dict(parse_qsl(location.query))
 
