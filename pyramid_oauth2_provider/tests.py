@@ -197,6 +197,16 @@ class TestAuthorizeEndpoint(TestCase):
         response = self._process_view()
         self._validate_authcode_response(response)
 
+    def testState(self):
+        state_value = 'testing'
+        self.request.params['state'] = state_value
+        response = self._process_view()
+        self._validate_authcode_response(response)
+        parts = urlparse(response.location)
+        params = dict(parse_qsl(parts.query))
+        self.failUnless('state' in params)
+        self.failUnlessEqual(state_value, params['state'])
+
 class TestTokenEndpoint(TestCase):
     def setUp(self):
         TestCase.setUp(self)
