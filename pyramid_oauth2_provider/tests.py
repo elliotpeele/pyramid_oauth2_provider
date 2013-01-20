@@ -13,7 +13,7 @@
 import base64
 import unittest
 import transaction
-from urlparse import urlparse, parse_qs
+from urlparse import urlparse, parse_qsl
 
 from sqlalchemy import create_engine
 
@@ -141,7 +141,7 @@ class TestAuthorizeEndpoint(TestCase):
         self.failUnlessEqual(location.hostname, redirect.hostname)
         self.failUnlessEqual(location.path, redirect.path)
 
-        params = parse_qs(location.query)
+        params = dict(parse_qsl(location.query))
 
         self.failUnless('code' in params)
 

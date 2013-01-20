@@ -18,6 +18,8 @@ from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.httpexceptions import HTTPMethodNotAllowed
 from pyramid.httpexceptions import HTTPFound
+from urlparse import urlparse, parse_qsl, ParseResult
+from urllib import urlencode
 
 from .models import DBSession as db
 from .models import Oauth2Token
@@ -69,20 +71,25 @@ def oauth2_authorize(request):
 
     resp = None
     response_type = request.params.get('response_type')
+    state = request.params.get('state')
     if 'code' == response_type:
-        state = request.params.get('state') #recommended
-        resp = handle_authcode(request, client, redirection_uri)
+        resp = handle_authcode(request, client, redirection_uri, state)
     elif 'token' == response_type:
-        state = request.params.get('state') #recommended
-        resp = handle_implicit(request, client, redirection_uri)
+        resp = handle_implicit(request, client, redirection_uri, state)
     else:
         log.info('received invalid response_type %s')
         return HTTPBadRequest(InvalidRequest(error_description='Oauth2 unknown '
             'response_type not supported'))
     return resp
 
-def handle_authcode(request, client, redirection_uri):
-    return HTTPFound(location=redirection_uri.uri)
+def handle_authcode(request, client, redirection_uri, state=None):
+    parts = urlparse(redirection_uri.uri)
+    qparams = dict(parse_qsl(parts.query))
+    qparams['code'] = 1234
+    if state:
+        qparams['state'] = state
+    parts = ParseResult(parts.scheme, parts.netloc, parts.path, parts.params, urlencode(qparams), '')
+    return HTTPFound(location=parts.geturl())
 
 def handle_implicit(request, client, redirection_uri):
     return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
