@@ -13,17 +13,10 @@
 import logging
 
 from pyramid.view import view_config
-<<<<<<< HEAD
 from pyramid.security import NO_PERMISSION_REQUIRED, authenticated_userid, Authenticated
-from pyramid.httpexceptions import HTTPBadRequest
-from pyramid.httpexceptions import HTTPUnauthorized
-from pyramid.httpexceptions import HTTPMethodNotAllowed
 from pyramid.httpexceptions import HTTPFound
 from urlparse import urlparse, parse_qsl, ParseResult
 from urllib import urlencode
-=======
-from pyramid.security import NO_PERMISSION_REQUIRED
->>>>>>> elliotpeele/master
 
 from .models import DBSession as db
 from .models import Oauth2Token

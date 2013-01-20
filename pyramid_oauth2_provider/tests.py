@@ -158,7 +158,7 @@ class TestAuthorizeEndpoint(TestCase):
     def testInvalidScheme(self):
         self.request.scheme = 'http'
         response = self._process_view()
-        self.failUnless(isinstance(response, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(response, jsonerrors.HTTPBadRequest))
 
     def testDisableSchemeCheck(self):
         self.request.scheme = 'http'
@@ -169,12 +169,12 @@ class TestAuthorizeEndpoint(TestCase):
     def testNoClientCreds(self):
         self.request.params.pop('client_id')
         response = self._process_view()
-        self.failUnless(isinstance(response, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(response, jsonerrors.HTTPBadRequest))
 
     def testNoResponseType(self):
         self.request.params.pop('response_type')
         response = self._process_view()
-        self.failUnless(isinstance(response, httpexceptions.HTTPBadRequest))
+        self.failUnless(isinstance(response, jsonerrors.HTTPBadRequest))
 
     def testRedirectUriSupplied(self):
         self.request.params['redirect_uri'] = self.redirect_uri
