@@ -13,8 +13,6 @@
 import time
 from datetime import datetime
 
-from sqlalchemy import func
-
 from sqlalchemy import Column
 from sqlalchemy import ForeignKey
 
@@ -53,7 +51,7 @@ class Oauth2Client(Base):
 
     def revoke(self):
         self.revoked = True
-        self.revocation_date = func.now()
+        self.revocation_date = datetime.utcnow()
 
     def isRevoked(self):
         return self.revoked
@@ -70,7 +68,7 @@ class Oauth2Token(Base):
     revoked = Column(Boolean, default=False)
     revocation_date = Column(DateTime)
 
-    creation_date = Column(DateTime, default=func.now())
+    creation_date = Column(DateTime, default=datetime.utcnow)
 
     client_id = Column(Integer, ForeignKey(Oauth2Client.id))
     client = relationship(Oauth2Client, backref=backref('tokens'))
@@ -84,7 +82,7 @@ class Oauth2Token(Base):
 
     def revoke(self):
         self.revoked = True
-        self.revocation_date = func.now()
+        self.revocation_date = datetime.utcnow()
 
     def isRevoked(self):
         expiry = time.mktime(self.creation_date.timetuple()) + self.expires_in
