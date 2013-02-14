@@ -19,10 +19,12 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authentication import CallbackAuthenticationPolicy
 
 from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPUnauthorized
 
 from .models import Oauth2Token
 from .models import DBSession as db
 from .errors import InvalidToken
+from .errors import InvalidRequest
 from .util import getClientCredentials
 
 log = logging.getLogger('pyramid_oauth2_provider.authentication')
@@ -38,8 +40,12 @@ class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
             return None
 
         auth_token = db.query(Oauth2Token).filter_by(access_token=token).first()
-        if not auth_token or auth_token.isRevoked():
-            raise HTTPBadRequest(InvalidToken())
+        # Bad input, return 400 Invalid Request
+        if not auth_token:
+            raise HTTPBadRequest(InvalidRequest())
+        # Expired or revoked token, return 401 invalid token
+        if auth_token.isRevoked():
+            raise HTTPUnauthorized(InvalidToken())
 
         return auth_token
 
