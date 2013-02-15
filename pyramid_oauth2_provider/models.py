@@ -39,6 +39,7 @@ from .generators import gen_client_secret
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
 
+
 class Oauth2Client(Base):
     __tablename__ = 'oauth2_provider_clients'
     id = Column(Integer, primary_key=True)
@@ -70,6 +71,7 @@ class Oauth2RedirectUri(Base):
     def __init__(self, client, uri):
         self.client = client
         self.uri = uri
+
 
 class Oauth2Code(Base):
     __tablename__ = 'oauth2_provider_codes'
