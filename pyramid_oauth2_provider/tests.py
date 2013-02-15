@@ -13,7 +13,8 @@
 import base64
 import unittest
 import transaction
-from urlparse import urlparse, parse_qsl
+from urlparse import urlparse
+from urlparse import parse_qsl
 
 from sqlalchemy import create_engine
 
@@ -23,7 +24,8 @@ from pyramid import testing
 from pyramid.response import Response
 
 from . import jsonerrors
-from .views import oauth2_token, oauth2_authorize
+from .views import oauth2_token
+from .views import oauth2_authorize
 from .models import DBSession
 from .models import Oauth2Token
 from .models import Oauth2Client

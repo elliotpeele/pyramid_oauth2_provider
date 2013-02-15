@@ -13,9 +13,13 @@
 import logging
 
 from pyramid.view import view_config
-from pyramid.security import NO_PERMISSION_REQUIRED, authenticated_userid, Authenticated
+from pyramid.security import NO_PERMISSION_REQUIRED
+from pyramid.security import authenticated_userid
+from pyramid.security import Authenticated
 from pyramid.httpexceptions import HTTPFound
-from urlparse import urlparse, parse_qsl, ParseResult
+from urlparse import urlparse
+from urlparse import parse_qsl
+from urlparse import ParseResult
 from urllib import urlencode
 
 from .models import DBSession as db
