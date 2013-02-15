@@ -58,6 +58,7 @@ class Oauth2Client(Base):
     def isRevoked(self):
         return self.revoked
 
+
 class Oauth2RedirectUri(Base):
     __tablename__ = 'oauth2_provider_redirect_uris'
     id = Column(Integer, primary_key=True)
@@ -96,9 +97,11 @@ class Oauth2Code(Base):
         self.revocation_date = func.now()
 
     def isRevoked(self):
-        if self.creation_date + self.expires_in > func.now():
+        expiry = time.mktime(self.create_date.timetuple()) + self.expires_in
+        if datetime.frometimestamp(expiry) < datetime.utcnow():
             self.revoke()
         return self.revoked
+
 
 class Oauth2Token(Base):
     __tablename__ = 'oauth2_provider_tokens'
