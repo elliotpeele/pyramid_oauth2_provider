@@ -38,10 +38,31 @@ from .jsonerrors import HTTPBadRequest
 from .jsonerrors import HTTPUnauthorized
 from .jsonerrors import HTTPMethodNotAllowed
 
+
+def require_https(handler):
+    """
+     This check should be taken care of via the authorization policy, but in
+     case someone has configured a different policy, check again. HTTPS is
+     required for all Oauth2 authenticated requests to ensure the security of
+     client credentials and authorization tokens.
+    """
+    def wrapped(request):
+        if (request.scheme != 'https' and
+                oauth2_settings('require_ssl', default=True)):
+            log.info('rejected request due to unsupported scheme: %s'
+                     % request.scheme)
+            return HTTPBadRequest(InvalidRequest(
+                error_description='Oauth2 requires all requests'
+                                  ' to be made via HTTPS.'))
+        return handler(request)
+    return wrapped
+
+
 log = logging.getLogger('pyramid_oauth2_provider.views')
 
 @view_config(route_name='oauth2_provider_authorize', renderer='json',
              permission=Authenticated)
+@require_https
 def oauth2_authorize(request):
     """
     * In the case of a 'code' authorize request a GET or POST is made
@@ -79,17 +100,6 @@ def oauth2_authorize(request):
         log.info('received invalid client credentials')
         return HTTPBadRequest(InvalidRequest(
             error_description='Invalid client credentials'))
-
-    # This check should be taken care of via the authorization policy, but in
-    # case someone has configured a different policy, check again. HTTPS is
-    # required for all Oauth2 authenticated requests to ensure the security of
-    # client credentials and authorization tokens.
-    if (request.scheme != 'https' and
-        oauth2_settings('require_ssl', default=True)):
-        log.info('rejected request due to unsupported scheme: %s'
-                 % request.scheme)
-        return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
-            'requires all requests to be made via HTTPS.'))
 
     redirect_uri = request.params.get('redirect_uri')
     redirection_uri = None
@@ -140,6 +150,7 @@ def handle_implicit(request, client, redirection_uri, state=None):
 
 @view_config(route_name='oauth2_provider_token', renderer='json',
              permission=NO_PERMISSION_REQUIRED)
+@require_https
 def oauth2_token(request):
     """
     * In the case of an incoming authentication request a POST is made
@@ -192,17 +203,6 @@ def oauth2_token(request):
         log.info('rejected request due to invalid method: %s' % request.method)
         return HTTPMethodNotAllowed(
             'This endpoint only supports the POST method.')
-
-    # This check should be taken care of via the authorization policy, but in
-    # case someone has configured a different policy, check again. HTTPS is
-    # required for all Oauth2 authenticated requests to ensure the security of
-    # client credentials and authorization tokens.
-    if (request.scheme != 'https' and
-        oauth2_settings('require_ssl', default=True)):
-        log.info('rejected request due to unsupported scheme: %s'
-            % request.scheme)
-        return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
-            'requires all requests to be made via HTTPS.'))
 
     getClientCredentials(request)
 
