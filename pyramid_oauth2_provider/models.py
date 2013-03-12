@@ -37,6 +37,7 @@ from .generators import gen_client_secret
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
 
+
 class Oauth2Client(Base):
     __tablename__ = 'oauth2_provider_clients'
     id = Column(Integer, primary_key=True)
@@ -54,6 +55,51 @@ class Oauth2Client(Base):
         self.revocation_date = datetime.utcnow()
 
     def isRevoked(self):
+        return self.revoked
+
+
+class Oauth2RedirectUri(Base):
+    __tablename__ = 'oauth2_provider_redirect_uris'
+    id = Column(Integer, primary_key=True)
+    uri = Column(String(256), unique=True, nullable=False)
+
+    client_id = Column(Integer, ForeignKey(Oauth2Client.id))
+    client = relationship(Oauth2Client, backref=backref('redirect_uris'))
+
+    def __init__(self, client, uri):
+        self.client = client
+        self.uri = uri
+
+
+class Oauth2Code(Base):
+    __tablename__ = 'oauth2_provider_codes'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    authcode = Column(String(64), unique=True, nullable=False)
+    expires_in = Column(Integer, nullable=False, default=10*60)
+
+    revoked = Column(Boolean, default=False)
+    revocation_date = Column(DateTime)
+
+    creation_date = Column(DateTime, default=datetime.utcnow)
+
+    client_id = Column(Integer, ForeignKey(Oauth2Client.id))
+    client = relationship(Oauth2Client, backref=backref('authcode'))
+
+    def __init__(self, client, user_id):
+        self.client = client
+        self.user_id = user_id
+
+        self.authcode = gen_token(self.client)
+
+    def revoke(self):
+        self.revoked = True
+        self.revocation_date = datetime.utcnow()
+
+    def isRevoked(self):
+        expiry = time.mktime(self.create_date.timetuple()) + self.expires_in
+        if datetime.frometimestamp(expiry) < datetime.utcnow():
+            self.revoke()
         return self.revoked
 
 

@@ -6,7 +6,7 @@
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
 # This program is distributed in the hope that it will be useful, but
-# without any warrenty; without even the implied warranty of merchantability
+# without any warranty; without even the implied warranty of merchantability
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
@@ -14,9 +14,18 @@ import logging
 
 from pyramid.view import view_config
 from pyramid.security import NO_PERMISSION_REQUIRED
+from pyramid.security import authenticated_userid
+from pyramid.security import Authenticated
+from pyramid.httpexceptions import HTTPFound
+from urlparse import urlparse
+from urlparse import parse_qsl
+from urlparse import ParseResult
+from urllib import urlencode
 
 from .models import DBSession as db
 from .models import Oauth2Token
+from .models import Oauth2Code
+from .models import Oauth2RedirectUri
 from .models import Oauth2Client
 from .errors import InvalidToken
 from .errors import InvalidClient
@@ -29,10 +38,119 @@ from .jsonerrors import HTTPBadRequest
 from .jsonerrors import HTTPUnauthorized
 from .jsonerrors import HTTPMethodNotAllowed
 
+
+def require_https(handler):
+    """
+     This check should be taken care of via the authorization policy, but in
+     case someone has configured a different policy, check again. HTTPS is
+     required for all Oauth2 authenticated requests to ensure the security of
+     client credentials and authorization tokens.
+    """
+    def wrapped(request):
+        if (request.scheme != 'https' and
+                oauth2_settings('require_ssl', default=True)):
+            log.info('rejected request due to unsupported scheme: %s'
+                     % request.scheme)
+            return HTTPBadRequest(InvalidRequest(
+                error_description='Oauth2 requires all requests'
+                                  ' to be made via HTTPS.'))
+        return handler(request)
+    return wrapped
+
+
 log = logging.getLogger('pyramid_oauth2_provider.views')
+
+@view_config(route_name='oauth2_provider_authorize', renderer='json',
+             permission=Authenticated)
+@require_https
+def oauth2_authorize(request):
+    """
+    * In the case of a 'code' authorize request a GET or POST is made
+    with the following structure.
+
+        GET /authorize?response_type=code&client_id=aoiuer HTTP/1.1
+        Host: server.example.com
+
+        POST /authorize HTTP/1.1
+        Host: server.example.com
+        Content-Type: application/x-www-form-urlencoded
+
+        response_type=code&client_id=aoiuer
+
+    The response_type and client_id are required parameters. A redirect_uri
+    and state parameters may also be supplied. The redirect_uri will be
+    validated against the URI's registered for the client. The state is an
+    opaque value that is simply passed through for security on the client's
+    end.
+
+    The response to a 'code' request will be a redirect to a registered URI
+    with the authorization code and optional state values as query
+    parameters.
+
+        HTTP/1.1 302 Found
+        Location: https://client.example.com/cb?code=AverTaer&state=efg
+
+    """
+    request.client_id = request.params.get('client_id')
+
+    client = db.query(Oauth2Client).filter_by(
+        client_id=request.client_id).first()
+
+    if not client:
+        log.info('received invalid client credentials')
+        return HTTPBadRequest(InvalidRequest(
+            error_description='Invalid client credentials'))
+
+    redirect_uri = request.params.get('redirect_uri')
+    redirection_uri = None
+    if len(client.redirect_uris) == 1 and (
+        not redirect_uri or redirect_uri == client.redirect_uris[0]):
+        redirection_uri = client.redirect_uris[0]
+    elif len(client.redirect_uris) > 0:
+        redirection_uri = db.query(Oauth2RedirectUri)\
+            .filter_by(client_id=client.id, uri=redirect_uri).first()
+
+    if redirection_uri is None:
+        return HTTPBadRequest(InvalidRequest(
+            error_description='Redirection URI validation failed'))
+
+    resp = None
+    response_type = request.params.get('response_type')
+    state = request.params.get('state')
+    if 'code' == response_type:
+        resp = handle_authcode(request, client, redirection_uri, state)
+    elif 'token' == response_type:
+        resp = handle_implicit(request, client, redirection_uri, state)
+    else:
+        log.info('received invalid response_type %s')
+        resp = HTTPBadRequest(InvalidRequest(error_description='Oauth2 unknown '
+            'response_type not supported'))
+    return resp
+
+def handle_authcode(request, client, redirection_uri, state=None):
+    parts = urlparse(redirection_uri.uri)
+    qparams = dict(parse_qsl(parts.query))
+
+    user_id = authenticated_userid(request)
+    auth_code = Oauth2Code(client, user_id)
+    db.add(auth_code)
+    db.flush()
+
+    qparams['code'] = auth_code.authcode
+    if state:
+        qparams['state'] = state
+    parts = ParseResult(
+        parts.scheme, parts.netloc, parts.path, parts.params,
+        urlencode(qparams), '')
+    return HTTPFound(location=parts.geturl())
+
+def handle_implicit(request, client, redirection_uri, state=None):
+    return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
+        'response_type "implicit" not supported'))
 
 @view_config(route_name='oauth2_provider_token', renderer='json',
              permission=NO_PERMISSION_REQUIRED)
+@require_https
 def oauth2_token(request):
     """
     * In the case of an incoming authentication request a POST is made
@@ -85,17 +203,6 @@ def oauth2_token(request):
         log.info('rejected request due to invalid method: %s' % request.method)
         return HTTPMethodNotAllowed(
             'This endpoint only supports the POST method.')
-
-    # This check should be taken care of via the authorization policy, but in
-    # case someone has configured a different policy, check again. HTTPS is
-    # required for all Oauth2 authenticated requests to ensure the security of
-    # client credentials and authorization tokens.
-    if (request.scheme != 'https' and
-        oauth2_settings('require_ssl', default=True)):
-        log.info('rejected request due to unsupported scheme: %s'
-            % request.scheme)
-        return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
-            'requires all requests to be made via HTTPS.'))
 
     getClientCredentials(request)
 
