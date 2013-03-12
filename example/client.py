@@ -59,10 +59,13 @@ class Client(object):
             'password': password,
         }
         resp = requests.post(self.token_endpoint, data=data,
-            headers=self._get_client_auth_header,
-            verify=self.verifySSL, config=dict(verbose=log.debug))
+            headers=self._get_client_auth_header(),
+            verify=self.verifySSL, )#config=dict(verbose=log.debug))
 
-        self.token = Token.fromdict(resp.json)
+        if not resp.ok:
+            raise RuntimeError
+
+        self.token = Token.fromdict(resp.json())
 
     def refresh_login(self):
         data = {
@@ -71,10 +74,13 @@ class Client(object):
             'user_id': self.token.user_id,
         }
         resp = requests.post(self.token_endpoint, data=data,
-            headers=self._get_client_auth_header,
-            verify=self.verifySSL, config=dict(verbose=log.debug))
+            headers=self._get_client_auth_header(),
+            verify=self.verifySSL, )#config=dict(verbose=log.debug))
 
-        self.token = Token.fromdict(resp.json)
+        if not resp.ok:
+            raise RuntimeError
+
+        self.token = Token.fromdict(resp.json())
 
     def _get_token_auth_header(self):
         return {
@@ -92,7 +98,7 @@ class Client(object):
 
         handler = getattr(requests, method)
         resp = handler(uri, data=data, headers=headers, verify=self.verifySSL,
-            config=dict(verbose=log.debug))
+            )#config=dict(verbose=log.debug))
 
         return resp
 
