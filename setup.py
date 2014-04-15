@@ -17,7 +17,7 @@ requires = [
     ]
 
 setup(name='pyramid_oauth2_provider',
-      version='0.1',
+      version='0.2',
       description='Oauth2 endpoint for pyramid applications',
       long_description=README,
       classifiers=[
