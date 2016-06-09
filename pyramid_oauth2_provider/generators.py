@@ -10,14 +10,15 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
+
 import time
 import random
 import hashlib
 
 def _get_hash():
     sha = hashlib.sha256()
-    sha.update(str(random.random()))
-    sha.update(str(time.time()))
+    sha.update(str(random.random()).encode('utf8'))
+    sha.update(str(time.time()).encode('utf8'))
     return sha
 
 def gen_client_id():
@@ -28,5 +29,6 @@ def gen_client_secret():
 
 def gen_token(client):
     sha = _get_hash()
-    sha.update(client.client_id)
+    sha.update(client.client_id.encode('utf8'))
     return sha.hexdigest()
+

@@ -11,6 +11,7 @@ requires = [
     'transaction',
     'pyramid_tm',
     'pyramid_debugtoolbar',
+    'six==1.10.0',
     'zope.sqlalchemy',
     'zope.interface',
     'waitress',

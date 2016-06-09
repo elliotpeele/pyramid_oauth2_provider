@@ -29,7 +29,7 @@ def oauth2_settings(key=None, default=None):
         else:
             return value
     else:
-        return dict((x.split('.', 1)[1], y) for x, y in settings.iteritems()
+        return dict((x.split('.', 1)[1], y) for x, y in settings.items()
             if x.startswith('oauth2_provider.'))
 
 def getClientCredentials(request):
@@ -52,7 +52,7 @@ def getClientCredentials(request):
         return False
 
     token_type = parts[0].lower()
-    token = base64.b64decode(parts[1])
+    token = base64.b64decode(parts[1]).decode('utf8')
 
     if token_type == 'basic':
         client_id, client_secret = token.split(':')

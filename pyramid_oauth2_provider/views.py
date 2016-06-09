@@ -17,10 +17,10 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.security import authenticated_userid
 from pyramid.security import Authenticated
 from pyramid.httpexceptions import HTTPFound
-from urlparse import urlparse
-from urlparse import parse_qsl
-from urlparse import ParseResult
-from urllib import urlencode
+from six.moves.urllib.parse import urlparse
+from six.moves.urllib.parse import parse_qsl
+from six.moves.urllib.parse import ParseResult
+from six.moves.urllib.parse import urlencode
 
 from .models import DBSession as db
 from .models import Oauth2Token

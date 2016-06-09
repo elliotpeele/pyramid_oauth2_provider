@@ -74,11 +74,11 @@ ${html_comment}
                 'comment': escape(comment),
                 'html_comment': html_comment,
                 }
-            for k, v in environ.items():
+            for k, v in list(environ.items()):
                 if (not k.startswith('wsgi.')) and ('.' in k):
                     continue
                 args[k] = escape(v)
-            for k, v in self.headers.items():
+            for k, v in list(self.headers.items()):
                 args[k.lower()] = escape(v)
             page = page_template.substitute(status=self.status,
                 code=self.code, **args)
