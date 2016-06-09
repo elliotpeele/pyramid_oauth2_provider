@@ -13,8 +13,8 @@
 import base64
 import unittest
 import transaction
-from urlparse import urlparse
-from urlparse import parse_qsl
+from six.moves.urllib.parse import urlparse
+from six.moves.urllib.parse import parse_qsl
 
 from sqlalchemy import create_engine
 
@@ -80,8 +80,8 @@ class TestCase(unittest.TestCase):
         testing.tearDown()
 
     def getAuthHeader(self, username, password, scheme='Basic'):
-        return {'Authorization': '%s %s'
-            % (scheme, base64.b64encode('%s:%s' % (username, password)))}
+        encoded = base64.b64encode(('%s:%s' % (username, password)).encode('utf8'))
+        return {'Authorization': '%s %s' % (scheme, encoded.decode('utf8'))}
 
 class TestAuthorizeEndpoint(TestCase):
     def setUp(self):
@@ -135,24 +135,24 @@ class TestAuthorizeEndpoint(TestCase):
         return token
 
     def _validate_authcode_response(self, response):
-        self.failUnless(isinstance(response, Response))
-        self.failUnlessEqual(response.status_int, 302)
+        self.assertTrue(isinstance(response, Response))
+        self.assertEqual(response.status_int, 302)
 
         redirect = urlparse(self.redirect_uri)
         location = urlparse(response.location)
-        self.failUnlessEqual(location.scheme, redirect.scheme)
-        self.failUnlessEqual(location.hostname, redirect.hostname)
-        self.failUnlessEqual(location.path, redirect.path)
-        self.failIf(location.fragment)
+        self.assertEqual(location.scheme, redirect.scheme)
+        self.assertEqual(location.hostname, redirect.hostname)
+        self.assertEqual(location.path, redirect.path)
+        self.assertFalse(location.fragment)
 
         params = dict(parse_qsl(location.query))
 
-        self.failUnless('code' in params)
+        self.assertTrue('code' in params)
 
         dbauthcodes = DBSession.query(Oauth2Code).filter_by(
             authcode=params.get('code')).all()
 
-        self.failUnless(len(dbauthcodes) == 1)
+        self.assertTrue(len(dbauthcodes) == 1)
 
     def testAuthCodeRequest(self):
         response = self._process_view()
@@ -161,7 +161,7 @@ class TestAuthorizeEndpoint(TestCase):
     def testInvalidScheme(self):
         self.request.scheme = 'http'
         response = self._process_view()
-        self.failUnless(isinstance(response, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(response, jsonerrors.HTTPBadRequest))
 
     def testDisableSchemeCheck(self):
         self.request.scheme = 'http'
@@ -172,12 +172,12 @@ class TestAuthorizeEndpoint(TestCase):
     def testNoClientCreds(self):
         self.request.params.pop('client_id')
         response = self._process_view()
-        self.failUnless(isinstance(response, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(response, jsonerrors.HTTPBadRequest))
 
     def testNoResponseType(self):
         self.request.params.pop('response_type')
         response = self._process_view()
-        self.failUnless(isinstance(response, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(response, jsonerrors.HTTPBadRequest))
 
     def testRedirectUriSupplied(self):
         self.request.params['redirect_uri'] = self.redirect_uri
@@ -189,7 +189,7 @@ class TestAuthorizeEndpoint(TestCase):
             redirect_uri = Oauth2RedirectUri(self.client, 'https://otherhost.com')
             DBSession.add(redirect_uri)
         response = self._process_view()
-        self.failUnless(isinstance(response, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(response, jsonerrors.HTTPBadRequest))
 
     def testMultipleRedirectUrisSpecified(self):
         with transaction.manager:
@@ -214,8 +214,8 @@ class TestAuthorizeEndpoint(TestCase):
         parts = urlparse(response.location)
         params = dict(parse_qsl(parts.query))
 
-        self.failUnless('some' in params)
-        self.failUnlessEqual(params['some'], 'value')
+        self.assertTrue('some' in params)
+        self.assertEqual(params['some'], 'value')
 
     def testState(self):
         state_value = 'testing'
@@ -224,8 +224,8 @@ class TestAuthorizeEndpoint(TestCase):
         self._validate_authcode_response(response)
         parts = urlparse(response.location)
         params = dict(parse_qsl(parts.query))
-        self.failUnless('state' in params)
-        self.failUnlessEqual(state_value, params['state'])
+        self.assertTrue('state' in params)
+        self.assertEqual(state_value, params['state'])
 
 class TestTokenEndpoint(TestCase):
     def setUp(self):
@@ -286,21 +286,21 @@ class TestTokenEndpoint(TestCase):
         return token
 
     def _validate_token(self, token):
-        self.failUnless(isinstance(token, dict))
-        self.failUnlessEqual(token.get('user_id'), self.auth)
-        self.failUnlessEqual(token.get('expires_in'), 3600)
-        self.failUnlessEqual(token.get('token_type'), 'bearer')
-        self.failUnlessEqual(len(token.get('access_token')), 64)
-        self.failUnlessEqual(len(token.get('refresh_token')), 64)
-        self.failUnlessEqual(len(token), 5)
+        self.assertTrue(isinstance(token, dict))
+        self.assertEqual(token.get('user_id'), self.auth)
+        self.assertEqual(token.get('expires_in'), 3600)
+        self.assertEqual(token.get('token_type'), 'bearer')
+        self.assertEqual(len(token.get('access_token')), 64)
+        self.assertEqual(len(token.get('refresh_token')), 64)
+        self.assertEqual(len(token), 5)
 
         dbtoken = DBSession.query(Oauth2Token).filter_by(
             access_token=token.get('access_token')).first()
 
-        self.failUnlessEqual(dbtoken.user_id, token.get('user_id'))
-        self.failUnlessEqual(dbtoken.expires_in, token.get('expires_in'))
-        self.failUnlessEqual(dbtoken.access_token, token.get('access_token'))
-        self.failUnlessEqual(dbtoken.refresh_token, token.get('refresh_token'))
+        self.assertEqual(dbtoken.user_id, token.get('user_id'))
+        self.assertEqual(dbtoken.expires_in, token.get('expires_in'))
+        self.assertEqual(dbtoken.access_token, token.get('access_token'))
+        self.assertEqual(dbtoken.refresh_token, token.get('refresh_token'))
 
     def testTokenRequest(self):
         self.auth = 500
@@ -310,12 +310,12 @@ class TestTokenEndpoint(TestCase):
     def testInvalidMethod(self):
         self.request.method = 'GET'
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPMethodNotAllowed))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPMethodNotAllowed))
 
     def testInvalidScheme(self):
         self.request.scheme = 'http'
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testDisableSchemeCheck(self):
         self.request.scheme = 'http'
@@ -326,40 +326,40 @@ class TestTokenEndpoint(TestCase):
     def testNoClientCreds(self):
         self.request.headers = {}
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPUnauthorized))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPUnauthorized))
 
     def testInvalidClientCreds(self):
         self.request.headers = self.getAuthHeader(
             self.client.client_id, 'abcde')
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testInvalidGrantType(self):
         self.request.POST['grant_type'] = 'foo'
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testCacheHeaders(self):
         self._process_view()
-        self.failUnlessEqual(
+        self.assertEqual(
             self.request.response.headers.get('Cache-Control'), 'no-store')
-        self.failUnlessEqual(
+        self.assertEqual(
             self.request.response.headers.get('Pragma'), 'no-cache')
 
     def testMissingUsername(self):
         self.request.POST.pop('username')
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testMissingPassword(self):
         self.request.POST.pop('password')
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testFailedPassword(self):
         self.auth = False
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPUnauthorized))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPUnauthorized))
 
     def testRefreshToken(self):
         token = self._process_view()
@@ -376,7 +376,7 @@ class TestTokenEndpoint(TestCase):
             token.get('refresh_token'), token.get('user_id'))
         self.request.POST.pop('refresh_token')
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testMissingUserId(self):
         token = self._process_view()
@@ -385,7 +385,7 @@ class TestTokenEndpoint(TestCase):
             token.get('refresh_token'), token.get('user_id'))
         self.request.POST.pop('user_id')
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testInvalidRefreshToken(self):
         token = self._process_view()
@@ -393,7 +393,7 @@ class TestTokenEndpoint(TestCase):
         self.request = self._create_refresh_token_request(
             'abcd', token.get('user_id'))
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPUnauthorized))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPUnauthorized))
 
     def testRefreshInvalidClientId(self):
         token = self._process_view()
@@ -403,7 +403,7 @@ class TestTokenEndpoint(TestCase):
         self.request.headers = self.getAuthHeader(
             '1234', self.client.client_secret)
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testUserIdMissmatch(self):
         token = self._process_view()
@@ -411,7 +411,7 @@ class TestTokenEndpoint(TestCase):
         self.request = self._create_refresh_token_request(
             token.get('refresh_token'), '2')
         token = self._process_view()
-        self.failUnless(isinstance(token, jsonerrors.HTTPBadRequest))
+        self.assertTrue(isinstance(token, jsonerrors.HTTPBadRequest))
 
     def testRevokedAccessTokenRefresh(self):
         token = self._process_view()
@@ -434,7 +434,7 @@ class TestTokenEndpoint(TestCase):
             access_token=token.get('access_token')).first()
         dbtoken.expires_in = 0
 
-        self.failUnlessEqual(dbtoken.isRevoked(), True)
+        self.assertEqual(dbtoken.isRevoked(), True)
 
     def testTimeRevokeAccessToken2(self):
         token = self._process_view()
@@ -444,4 +444,4 @@ class TestTokenEndpoint(TestCase):
             access_token=token.get('access_token')).first()
         dbtoken.expires_in = 10
 
-        self.failUnlessEqual(dbtoken.isRevoked(), False)
+        self.assertEqual(dbtoken.isRevoked(), False)

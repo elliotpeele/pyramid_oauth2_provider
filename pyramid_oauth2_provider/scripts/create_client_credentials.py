@@ -35,8 +35,8 @@ def create_client():
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> <section>\n'
-          '(example: "%s development.ini myproject")' % (cmd, cmd)) 
+    print(('usage: %s <config_uri> <section>\n'
+          '(example: "%s development.ini myproject")' % (cmd, cmd))) 
     sys.exit(1)
 
 def main(argv=sys.argv):
@@ -51,8 +51,8 @@ def main(argv=sys.argv):
 
     with transaction.manager:
         id, secret = create_client()
-        print 'client_id:', id
-        print 'client_secret:', secret
+        print('client_id:', id)
+        print('client_secret:', secret)
 
 if __name__ == '__main__':
     import epdb
