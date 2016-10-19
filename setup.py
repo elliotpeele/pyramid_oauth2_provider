@@ -41,6 +41,7 @@ setup(name='pyramid_oauth2_provider',
       main = pyramid_oauth2_provider:main
       [console_scripts]
       initialize_pyramid_oauth2_provider_db = pyramid_oauth2_provider.scripts.initializedb:main
+      create_client_credentials=pyramid_oauth2_provider.scripts.create_client_credentials:main
       """,
       )
 
