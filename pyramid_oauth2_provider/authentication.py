@@ -35,7 +35,11 @@ class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
         return bool(getClientCredentials(request))
 
     def _get_auth_token(self, request):
-        token_type, token = getClientCredentials(request)
+        try:
+            token_type, token = getClientCredentials(request)
+        except TypeError:
+            raise HTTPBadRequest(InvalidRequest())
+
         if token_type != 'bearer':
             return None
 
