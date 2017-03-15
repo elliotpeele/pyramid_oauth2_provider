@@ -28,10 +28,11 @@ from pyramid_oauth2_provider.models import (
     Oauth2Client,
     )
 
-def create_client():
-    client = Oauth2Client()
+def create_client(salt=None):
+    client = Oauth2Client(salt=salt)
+    client_secret = client.new_client_secret()
     DBSession.add(client)
-    return client.client_id, client.client_secret
+    return client.client_id, client_secret
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
@@ -47,10 +48,16 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     settings = get_appsettings(config_uri, section)
     engine = engine_from_config(settings, 'sqlalchemy.')
+    try:
+        salt = settings['oauth2_provider.salt']
+    except KeyError:
+        raise ValueError(
+            'oauth2_provider.salt configuration required.'
+        )
     initialize_sql(engine, settings)
 
     with transaction.manager:
-        id, secret = create_client()
+        id, secret = create_client(salt=salt)
         print('client_id:', id)
         print('client_secret:', secret)
 

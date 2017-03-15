@@ -12,6 +12,7 @@
 
 import os
 import sys
+import json
 
 from sqlalchemy import engine_from_config
 
@@ -27,16 +28,19 @@ from ..models import (
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print(('usage: %s <config_uri>\n'
-          '(example: "%s development.ini")' % (cmd, cmd))) 
+    print(('usage: %s <config_uri> <drop>\n'
+          '(example: "%s development.ini false")' % (cmd, cmd)))
     sys.exit(1)
 
 def main(argv=sys.argv):
-    if len(argv) != 2:
+    if len(argv) != 3:
         usage(argv)
     config_uri = argv[1]
+    drop = json.loads(argv[2].lower())
     setup_logging(config_uri)
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
+    if drop:
+        Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
