@@ -12,14 +12,17 @@
 
 import time
 from datetime import datetime
+from base64 import b64decode
 
 from sqlalchemy import Column
 from sqlalchemy import ForeignKey
 
+from sqlalchemy import Binary
 from sqlalchemy import String
 from sqlalchemy import Integer
 from sqlalchemy import Boolean
 from sqlalchemy import DateTime
+from sqlalchemy import Unicode
 
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -27,8 +30,13 @@ from sqlalchemy.orm import backref
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import synonym
 
 from zope.sqlalchemy import ZopeTransactionExtension
+
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+from cryptography.hazmat.backends import default_backend
+from .util import oauth2_settings
 
 from .generators import gen_token
 from .generators import gen_client_id
@@ -36,19 +44,61 @@ from .generators import gen_client_secret
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
+backend = default_backend()
 
 
 class Oauth2Client(Base):
     __tablename__ = 'oauth2_provider_clients'
     id = Column(Integer, primary_key=True)
-    client_id = Column(String(64), unique=True, nullable=False)
-    client_secret = Column(String(64), unique=True, nullable=False)
+    client_id = Column(Unicode(64), unique=True, nullable=False)
+    _client_secret = Column(Binary(255), unique=True, nullable=False)
     revoked = Column(Boolean, default=False)
     revocation_date = Column(DateTime)
+    _salt = None
 
-    def __init__(self):
+    def __init__(self, salt=None):
+        self._salt = salt
         self.client_id = gen_client_id()
         self.client_secret = gen_client_secret()
+
+    def new_client_secret(self):
+        secret = gen_client_secret()
+        self.client_secret = secret
+        return secret
+
+    def _get_client_secret(self):
+        return self._client_secret
+
+    def _set_client_secret(self, client_secret):
+        if self._salt:
+            salt = b64decode(self._salt.encode('utf-8'))
+        else:
+            try:
+                if not oauth2_settings('salt'):
+                    raise ValueError(
+                        'oauth2_provider.salt configuration required.'
+                    )
+                salt = b64decode(oauth2_settings('salt').encode('utf-8'))
+            except AttributeError:
+                return
+
+        kdf = Scrypt(
+            salt=salt,
+            length=64,
+            n=2 ** 14,
+            r=8,
+            p=1,
+            backend=backend
+        )
+
+        try:
+            client_secret = bytes(client_secret, 'utf-8')
+        except TypeError:
+            pass
+        self._client_secret = kdf.derive(client_secret)
+
+    client_secret = synonym('_client_secret', descriptor=property(
+        _get_client_secret, _set_client_secret))
 
     def revoke(self):
         self.revoked = True
@@ -61,7 +111,7 @@ class Oauth2Client(Base):
 class Oauth2RedirectUri(Base):
     __tablename__ = 'oauth2_provider_redirect_uris'
     id = Column(Integer, primary_key=True)
-    uri = Column(String(256), unique=True, nullable=False)
+    uri = Column(Unicode(256), unique=True, nullable=False)
 
     client_id = Column(Integer, ForeignKey(Oauth2Client.id))
     client = relationship(Oauth2Client, backref=backref('redirect_uris'))
@@ -75,7 +125,7 @@ class Oauth2Code(Base):
     __tablename__ = 'oauth2_provider_codes'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, nullable=False)
-    authcode = Column(String(64), unique=True, nullable=False)
+    authcode = Column(Unicode(64), unique=True, nullable=False)
     expires_in = Column(Integer, nullable=False, default=10*60)
 
     revoked = Column(Boolean, default=False)
@@ -107,8 +157,8 @@ class Oauth2Token(Base):
     __tablename__ = 'oauth2_provider_tokens'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, nullable=False)
-    access_token = Column(String(64), unique=True, nullable=False)
-    refresh_token = Column(String(64), unique=True, nullable=False)
+    access_token = Column(Unicode(64), unique=True, nullable=False)
+    refresh_token = Column(Unicode(64), unique=True, nullable=False)
     expires_in = Column(Integer, nullable=False, default=60*60)
 
     revoked = Column(Boolean, default=False)

@@ -1,5 +1,14 @@
 pyramid_oauth2_provider README
-==================
+==============================
+
+
+##### Warning: 
+You will need to reset your DB tables related to this library and 
+provide a new ini config 'oauth2_provider.salt' when upgrading from v0.2.0.
+To reset the tables, run the init script with added boolean argument to drop:
+
+    initialize_pyramid_oauth2_provider_db-script.py development.ini true
+
 
 Getting Started
 ---------------
@@ -17,6 +26,16 @@ by doing the following:
   interface that works against your current user authentication check mechanism.
 * In your paster configuration configure which IAuthCheck implementation to use
   by specifying `oauth2_provider.auth_checker`.
+* In your production/development configuration, set a 16 random byte, base64 
+  encoded salt for scrypt:
+        
+        oauth2_provider.salt = REPLACEME
+        
+  How to generate a salt in Python:
+  
+        from base64 import b64encode
+        b64encode(os.urandom(16)).decode('utf-8')
+
 * In your development configuration, you may also want to disable ssl
   enforcement by specifying `oauth2_provider.require_ssl = false`.
 * Generate client credentials using the `create_client_credentials` script,

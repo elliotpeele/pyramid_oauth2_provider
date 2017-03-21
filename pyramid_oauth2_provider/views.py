@@ -12,6 +12,8 @@
 
 import logging
 
+from base64 import b64decode
+
 from pyramid.view import view_config
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.security import authenticated_userid
@@ -21,12 +23,15 @@ from six.moves.urllib.parse import urlparse
 from six.moves.urllib.parse import parse_qsl
 from six.moves.urllib.parse import ParseResult
 from six.moves.urllib.parse import urlencode
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+from cryptography.exceptions import InvalidKey
 
 from .models import DBSession as db
 from .models import Oauth2Token
 from .models import Oauth2Code
 from .models import Oauth2RedirectUri
 from .models import Oauth2Client
+from .models import backend
 from .errors import InvalidToken
 from .errors import InvalidClient
 from .errors import InvalidRequest
@@ -218,7 +223,29 @@ def oauth2_token(request):
         client_id=request.client_id).first()
 
     # Again, the authorization policy should catch this, but check again.
-    if not client or client.client_secret != request.client_secret:
+    if not oauth2_settings('salt'):
+        raise ValueError('oauth2_provider.salt configuration required.')
+    salt = b64decode(oauth2_settings('salt').encode('utf-8'))
+    kdf = Scrypt(
+        salt=salt,
+        length=64,
+        n=2 ** 14,
+        r=8,
+        p=1,
+        backend=backend
+    )
+
+    try:
+        client_secret = request.client_secret
+        try:
+            client_secret = bytes(client_secret, 'utf-8')
+        except TypeError:
+            client_secret = client_secret.encode('utf-8')
+        kdf.verify(client_secret, client.client_secret)
+        bad_secret = False
+    except (AttributeError, InvalidKey):
+        bad_secret = True
+    if not client or bad_secret:
         log.info('received invalid client credentials')
         return HTTPBadRequest(InvalidRequest(
             error_description='Invalid client credentials'))
