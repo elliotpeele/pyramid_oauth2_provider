@@ -37,7 +37,7 @@ def create_client(salt=None):
 def usage(argv):
     cmd = os.path.basename(argv[0])
     print(('usage: %s <config_uri> <section>\n'
-          '(example: "%s development.ini myproject")' % (cmd, cmd))) 
+          '(example: "%s development.ini myproject")' % (cmd, cmd)))
     sys.exit(1)
 
 def main(argv=sys.argv):
@@ -62,7 +62,4 @@ def main(argv=sys.argv):
         print('client_secret:', secret)
 
 if __name__ == '__main__':
-    import epdb
-    sys.excepthook = epdb.excepthook()
-
     main()
