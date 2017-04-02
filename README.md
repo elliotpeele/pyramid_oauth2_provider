@@ -9,6 +9,7 @@ To reset the tables, run the init script with added boolean argument to drop:
 
     initialize_pyramid_oauth2_provider_db-script.py development.ini true
 
+Additionally, scrypt requires OpenSSL v1.1.0 or newer.
 
 Getting Started
 ---------------
