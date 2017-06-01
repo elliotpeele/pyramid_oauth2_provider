@@ -51,7 +51,7 @@ class Oauth2Client(Base):
     __tablename__ = 'oauth2_provider_clients'
     id = Column(Integer, primary_key=True)
     client_id = Column(Unicode(64), unique=True, nullable=False)
-    _client_secret = Column(Binary(255), unique=True, nullable=False)
+    _client_secret = Column(Binary(255), nullable=False)
     revoked = Column(Boolean, default=False)
     revocation_date = Column(DateTime)
     _salt = None
